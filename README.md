@@ -3,3 +3,4 @@
 # Contributors
 
 - Erick Chauke
+- Mzudumile Kaizer
