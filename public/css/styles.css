@@ -1,0 +1,22 @@
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .footer {
+    margin-top: auto;
+  }
+  
+  .jumbotron {
+    background-color: #f8f9fa;
+    border-radius: 0.3rem;
+  }
+  
+  .card {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  
+  .navbar-brand {
+    font-weight: bold;
+  }
