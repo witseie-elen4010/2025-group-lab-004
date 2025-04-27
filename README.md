@@ -25,5 +25,5 @@ A web-based implementation of the Undercover social deduction game where players
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Start development server: `npm run dev` status
+3. Start development server: `npm run dev`
 4. Run tests: `npm test`
