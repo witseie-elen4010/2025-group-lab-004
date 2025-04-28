@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Undercover - Join Game</title>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <h1>Join FindMrWhite</h1>
+    <input type="text" id="playerName" placeholder="Enter your name">
+    <button onclick="joinGame()">Join Game</button>
+
+    <h2>Players:</h2>
+    <ul id="playersList"></ul>
+
+    <script>
+        const socket = io();
+
+        function joinGame() {
+            const name = document.getElementById('playerName').value.trim();
+            if (name !== "") {
+                socket.emit('joinGame', name);
+            }
+        }
+
+        socket.on('updatePlayers', (playerList) => {
+            const list = document.getElementById('playersList');
+            list.innerHTML = '';
+            playerList.forEach(player => {
+                const li = document.createElement('li');
+                li.textContent = player;
+                list.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>
