@@ -31,13 +31,13 @@
   },
   "homepage": "https://github.com/witseie-elen4010/2025-group-lab-004#readme",
   "dependencies": {
-    "bcrypt": "5.1.1",
+    "bcrypt": "^5.1.1",
     "body-parser": "^2.2.0",
     "dotenv": "^16.5.0",
     "ejs": "3.1.10",
     "ejs-mate": "4.0.0",
     "express": "^5.1.0",
-    "express-session": "1.18.1",
+    "express-session": "^1.18.1",
     "mongoose": "8.13.2",
     "mysql2": "^3.14.1"
   },
