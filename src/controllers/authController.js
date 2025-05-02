@@ -123,3 +123,9 @@ exports.postLogin = async (req, res) => {
     })
   }
 }
+
+// display dashboard
+exports.getDashboard =  (req, res) => {
+  res.render('dashboard', {title: 'dashboard'})
+}
+

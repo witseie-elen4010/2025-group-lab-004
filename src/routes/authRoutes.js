@@ -13,6 +13,9 @@ router.post('/register', authController.postRegister)
 router.get('/login', authController.getRegister)
 router.post('/login', authController.postRegister)
 
+// dashboard route
+router.get('/dashboard', authController.getDashboard) 
+
 // Logout routes (in Progress)
 
 // exports.logout = (req, res) => {
