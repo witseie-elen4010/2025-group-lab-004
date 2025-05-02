@@ -16,6 +16,10 @@ router.post('/login', authController.postRegister)
 // dashboard route
 router.get('/dashboard', authController.getDashboard) 
 
+// Game Creation routes
+router.get('/game_creation', authController.getGame_Creation)
+
+
 // Logout routes (in Progress)
 
 // exports.logout = (req, res) => {

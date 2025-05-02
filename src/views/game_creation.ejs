@@ -1,0 +1,17 @@
+<% layout('home_layout') %>
+<link rel="stylesheet" href="/css/game_creation.css">
+
+<div class="outer-container">
+    <div style="margin: 10px;" class="containerform">
+
+        <h3 class="heading">create a game</h3>
+        <hr>
+
+        <form action="/create_game" method="POST" id="form_to_create">
+            <p class="label">Create Game Code (6 digits):</p>
+            <p><input type="text" name="code" id="code"></p>
+            <p><button type="submit">Submit</button></p>
+        </form> 
+        
+    </div>
+</div>

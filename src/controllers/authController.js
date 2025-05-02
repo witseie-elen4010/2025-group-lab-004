@@ -129,3 +129,7 @@ exports.getDashboard =  (req, res) => {
   res.render('dashboard', {title: 'dashboard'})
 }
 
+// display Game create page
+exports.getGame_Creation =  (req, res) => {
+  res.render('game_creation', {title: 'create game'})
+}
