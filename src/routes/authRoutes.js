@@ -8,6 +8,8 @@ const authController = require('../controllers/authController')
 router.get('/register', authController.getRegister)
 router.post('/register', authController.postRegister)
 
-// We'll add login routes later
+// login routes
+router.get('/login', authController.getRegister)
+router.post('login', authController.postRegister)
 
 module.exports = router

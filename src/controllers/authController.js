@@ -17,53 +17,53 @@ exports.getRegister = (req, res) => {
 exports.postRegister = async (req, res) => {
   try {
     const { username, email, password, confirmPassword } = req.body
-    
+
     // Validate input
     if (!username || !email || !password || !confirmPassword) {
-      return res.render('register', { 
-        title: 'Register', 
-        error: 'All fields are required' 
+      return res.render('register', {
+        title: 'Register',
+        error: 'All fields are required'
       })
     }
-    
+
     if (password !== confirmPassword) {
-      return res.render('register', { 
-        title: 'Register', 
-        error: 'Passwords do not match' 
+      return res.render('register', {
+        title: 'Register',
+        error: 'Passwords do not match'
       })
     }
-    
+
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }]
     })
-    
+
     if (existingUser) {
-      return res.render('register', { 
-        title: 'Register', 
-        error: 'Username or email already in use' 
+      return res.render('register', {
+        title: 'Register',
+        error: 'Username or email already in use'
       })
     }
-    
+
     // Create new user
     const user = new User({
       username,
       email,
       password
     })
-    
+
     await user.save()
-    
+
     // Log registration in admin log
     logAction(`New user registered: ${username} (${email})`)
-    
+
     // Redirect to login page (we'll create this later)
     res.redirect('/login')
   } catch (error) {
     console.error('Registration error:', error)
-    res.render('register', { 
-      title: 'Register', 
-      error: 'An error occurred during registration' 
+    res.render('register', {
+      title: 'Register',
+      error: 'An error occurred during registration'
     })
   }
 }
