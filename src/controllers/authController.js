@@ -114,7 +114,7 @@ exports.postLogin = async (req, res) => {
     console.log(`User logged in: ${user.username}`)
 
     // Redirect to a main page
-    res.redirect('/dashboard')
+    res.redirect('/home')
   } catch (error) {
     console.error('Login error:', error)
     res.render('login', {
