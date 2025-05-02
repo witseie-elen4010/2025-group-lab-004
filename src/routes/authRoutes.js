@@ -8,6 +8,19 @@ const authController = require('../controllers/authController')
 router.get('/register', authController.getRegister)
 router.post('/register', authController.postRegister)
 
-// We'll add login routes later
+// login routes
+
+router.get('/login', authController.getRegister)
+router.post('/login', authController.postRegister)
+
+// Logout routes (in Progress)
+
+// exports.logout = (req, res) => {
+// req.session.destroy(() => {
+// res.redirect('/login')
+// })
+// }
+
+// router.get('/logout', authController.logout)
 
 module.exports = router
