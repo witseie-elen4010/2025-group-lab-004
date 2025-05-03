@@ -1,25 +1,22 @@
-const Game = require('../models/Game')
+'use strict'
 
-exports.joinGame = async (req, res) => {
-  const { code, userId } = req.body
+// controller/gameController.js
+const createJoinGame = (GameModel) => {
+  return async (req, res) => {
+    const { code, userId } = req.body
+    const game = await GameModel.findOne({ code })
 
-  try {
-    const game = await Game.findOne({ code })
-    if (!game) {
-      return res.status(404).json({ message: 'Game not found' })
-    }
+    if (!game) return res.status(404).json({ error: 'Game not found' })
 
-    if (game.players.includes(userId)) {
-      return res.status(400).json({ message: 'User already joined' })
-    }
+    if (game.players.includes(userId))
+      return res.status(400).json({ error: 'User already in game' })
 
     game.players.push(userId)
     await game.save()
 
-    res.status(200).json({ message: 'Joined game successfully', game })
-  } catch (err) {
-    console.error('Join error:', err)
-    res.status(500).json({ message: 'Server error' })
+    res.status(200).json({ message: 'Joined successfully', game })
   }
 }
+
+module.exports = { createJoinGame }
 

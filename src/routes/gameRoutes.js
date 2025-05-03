@@ -1,5 +1,8 @@
+'use strict'
+
 const express = require('express')
-const { joinGame } = require('../controllers/gameController')
+const Game = require('../models/Game')
+const { createJoinGame } = require('../controllers/gameController')
 const router = express.Router()
 
 // Render the join game page
@@ -10,7 +13,7 @@ router.get('/join', (req, res) => {
   })
 })
 
-router.post('/join', joinGame)
+router.post('/join', createJoinGame(Game))
 
 module.exports = router
 

@@ -26,7 +26,7 @@ const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
 
 //Game routes
-const gameRoutes = require('./routes/gameRoutes')
+const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/games', gameRoutes)
 
 

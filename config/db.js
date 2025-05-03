@@ -1,5 +1,6 @@
 // config/db.js
-const mongoose = require('mongoose');
+'use strict'
+const mongoose = require('mongoose')
 
 const connectDB = async () => {
   try {
@@ -7,12 +8,12 @@ const connectDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log('✅ MongoDB connected');
+    console.log('✅ MongoDB connected')
   } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
-    process.exit(1);
+    console.error('❌ MongoDB connection failed:', err.message)
+    process.exit(1)
   }
-};
+}
 
-module.exports = connectDB;
+module.exports = connectDB
 
