@@ -1,10 +1,15 @@
 'use strict'
 
 const express = require('express')
+const connectDB = require('./config/db')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
 const app = express()
+require('dotenv').config()
+//connect to database
+
+connectDB()
 
 // Configure middlewares
 app.use(bodyParser.json())
@@ -19,6 +24,11 @@ app.set('view engine', 'ejs')
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
+
+//Game routes
+const gameRoutes = require('./routes/gameRoutes')
+app.use('/games', gameRoutes)
+
 
 // Update default route to render home page
 app.get('/', (req, res) => {
