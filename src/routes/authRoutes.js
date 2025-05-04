@@ -10,8 +10,8 @@ router.post('/register', authController.postRegister)
 
 // login routes
 
-router.get('/login', authController.getRegister)
-router.post('/login', authController.postRegister)
+router.get('/login', authController.getLogin)
+router.post('/login', authController.getLogin)
 
 // Logout routes (in Progress)
 
