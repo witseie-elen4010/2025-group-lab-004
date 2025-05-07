@@ -5,11 +5,8 @@ const connectDB = require('./config/db')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
+const session = require('express-session')
 const app = express()
-require('dotenv').config()
-//connect to database
-
-connectDB()
 
 // Configure middlewares
 app.use(bodyParser.json())
@@ -21,13 +18,21 @@ app.engine('ejs', ejsMate)
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
 
+// Handling app use
+app.use(session({
+  secret: 'your-secret-key', // Replace with a strong secret in production
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // Set `secure: true` if using HTTPS
+}));
+
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
 
 //Game routes
 const gameRoutes = require('./src/routes/gameRoutes')
-app.use('/games', gameRoutes)
+app.use('/', gameRoutes)
 
 
 // Update default route to render home page

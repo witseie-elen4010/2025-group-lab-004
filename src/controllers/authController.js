@@ -56,7 +56,7 @@ exports.postRegister = async (req, res) => {
     await user.save()
 
     // Log registration in admin log
-    logAction(`New user registered: ${username} (${email})`)
+    // logAction(`New user registered: ${username} (${email})`)
 
     // Redirect to login page (we'll create this later)
     res.redirect('/login')
@@ -114,7 +114,7 @@ exports.postLogin = async (req, res) => {
     console.log(`User logged in: ${user.username}`)
 
     // Redirect to a main page
-    res.redirect('/home')
+    res.redirect('/dashboard')
   } catch (error) {
     console.error('Login error:', error)
     res.render('login', {
@@ -124,19 +124,5 @@ exports.postLogin = async (req, res) => {
   }
 }
 
-// display dashboard
-exports.getDashboard =  (req, res) => {
-  res.render('dashboard', {title: 'dashboard'})
-}
-
-// display Game create page
-exports.getGame_Creation =  (req, res) => {
-  res.render('game_creation', {title: 'create game'})
-}
-
-exports.postGame_Creation =  (req, res) => {
-  const {code} = req.body
-  res.redirect('/start_game')
-}
 
 
