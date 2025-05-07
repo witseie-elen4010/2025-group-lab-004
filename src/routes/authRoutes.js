@@ -13,12 +13,6 @@ router.post('/register', authController.postRegister)
 router.get('/login', authController.getLogin)
 router.post('/login', authController.postLogin)
 
-// dashboard route
-router.get('/dashboard', authController.getDashboard) 
-
-// Game Creation routes
-router.get('/game_creation', authController.getGame_Creation)
-router.post('/create_game', authController.postGame_Creation)
 
 
 // Logout routes (in Progress)

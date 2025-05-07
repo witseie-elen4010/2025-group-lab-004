@@ -32,7 +32,7 @@ app.use('/', authRoutes)
 
 //Game routes
 const gameRoutes = require('./src/routes/gameRoutes')
-app.use('/games', gameRoutes)
+app.use('/', gameRoutes)
 
 
 // Update default route to render home page

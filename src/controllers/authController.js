@@ -124,19 +124,5 @@ exports.postLogin = async (req, res) => {
   }
 }
 
-// display dashboard
-exports.getDashboard =  (req, res) => {
-  res.render('dashboard', {title: 'dashboard'})
-}
-
-// display Game create page
-exports.getGame_Creation =  (req, res) => {
-  res.render('game_creation', {title: 'create game'})
-}
-
-exports.postGame_Creation =  (req, res) => {
-  const {code} = req.body
-  res.redirect('/start_game')
-}
 
 
