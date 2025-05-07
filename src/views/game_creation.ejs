@@ -7,16 +7,20 @@
         <h3 class="heading">create a game</h3>
         <hr>
 
-        <form method="POST" id="form_to_create">
+        <form action="/create_game" method="POST" id="form_to_create">
             <p class="label">Create Game Code (6 digits):</p>
             <p><input type="text" name="code" id="code" required></p>
             <p><button type="submit">Submit</button></p>
         </form> 
 
+        <% if (Error) { %>
+            <p class="message"><%= Error%></p>
+        <% } %>
+
     </div>
 </div>
 
-<script>
+<!-- <script>
     document.getElementById("form_to_create").addEventListener("submit", function(event) {
         
         event.preventDefault(); // Stop form from submitting normally
@@ -31,4 +35,4 @@
             alert("Please enter a valid 6-digit numeric code.");
         }
     });
-</script>
+</script> -->
