@@ -56,7 +56,7 @@ exports.postRegister = async (req, res) => {
     await user.save()
 
     // Log registration in admin log
-    logAction(`New user registered: ${username} (${email})`)
+    // logAction(`New user registered: ${username} (${email})`)
 
     // Redirect to login page (we'll create this later)
     res.redirect('/login')
@@ -114,7 +114,10 @@ exports.postLogin = async (req, res) => {
     console.log(`User logged in: ${user.username}`)
 
     // Redirect to a main page
-    res.redirect('/home')
+    req.session.save(() => {
+      res.redirect('/dashboard');
+    });
+    
   } catch (error) {
     console.error('Login error:', error)
     res.render('login', {
@@ -123,3 +126,6 @@ exports.postLogin = async (req, res) => {
     })
   }
 }
+
+
+
