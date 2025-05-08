@@ -51,3 +51,7 @@ button {
   border-radius: 6px;
   cursor: pointer;
 }
+
+.message{
+  background-color: red;
+}

@@ -27,12 +27,30 @@ exports.getDashboard =  (req, res) => {
 
 // display Game create page
 exports.getGame_Creation =  (req, res) => {
-  res.render('game_creation', {title: 'create game'})
+  res.render('game_creation', {title: 'create game', Error: null})
 }
 
+// Handle for creating a game session
 exports.postGame_Creation = async (req, res) => {
+
   const {code} = req.body
+  console.log(code)
+
+  const game = await Game.findOne({ code })
+  if (game){
+    return res.render('game_creation', {title: 'create game', Error: 'The session already exist' })
+  } 
+  
+  // Create new user
+  const sess = new Game({
+    code
+  })
+  
+  await sess.save()
+
   res.redirect('/start_game')
 }
 
-
+exports.getStartgame =  (req, res) => {
+  res.render('start_page', {title: 'start game page'})
+}

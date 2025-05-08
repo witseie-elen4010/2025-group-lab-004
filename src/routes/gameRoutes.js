@@ -21,6 +21,7 @@ router.get('/dashboard', gameController.getDashboard)
 // Game Creation routes
 router.get('/game_creation', gameController.getGame_Creation)
 router.post('/create_game', gameController.postGame_Creation)
+router.get('/start_game', gameController.getStartgame) 
 
 
 module.exports = router

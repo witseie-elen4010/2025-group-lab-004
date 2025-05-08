@@ -12,18 +12,20 @@ const app = express()
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, 'public')))
-
+//
 // View engine setup
 app.engine('ejs', ejsMate)
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
+
+const cors = require('cors');
 
 // Handling app use
 app.use(session({
   secret: 'your-secret-key', // Replace with a strong secret in production
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false } // Set `secure: true` if using HTTPS
+  cookie: { secure: false} // Set `secure: true` if using HTTPS
 }));
 
 // Routes
@@ -34,7 +36,7 @@ app.use('/', authRoutes)
 const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/', gameRoutes)
 
-
+//
 // Update default route to render home page
 app.get('/', (req, res) => {
   res.render('home', { title: 'FindMrWhite' })
