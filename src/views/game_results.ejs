@@ -1,0 +1,46 @@
+<% layout('home_layout') %>
+<link rel="stylesheet" href="/css/game_results.css">
+
+<div class="results-container">
+    <h2>Game Over!</h2>
+    
+    <div class="winner-section">
+        <h3>Winners: <%= winningRole %></h3>
+        <div class="winners-list">
+            <% winners.forEach(function(player) { %>
+                <div class="winner-card">
+                    <h4><%= player.username %></h4>
+                    <p>Role: <%= player.role %></p>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+    
+    <div class="word-section">
+        <h3>The Words:</h3>
+        <p><strong>Civilian Word:</strong> <%= gameData.civilianWord %></p>
+        <p><strong>Undercover Word:</strong> <%= gameData.undercoverWord %></p>
+    </div>
+    
+    <div class="all-players-section">
+        <h3>All Players:</h3>
+        <div class="players-list">
+            <% gameData.players.forEach(function(player) { %>
+                <div class="player-result-card">
+                    <h4><%= player.username %></h4>
+                    <p>Role: <%= player.role %></p>
+                    <p>Word: <%= player.word %></p>
+                    <% if (player.isEliminated) { %>
+                        <p>Eliminated in round: <%= player.eliminatedInRound %></p>
+                    <% } else { %>
+                        <p>Survived all rounds</p>
+                    <% } %>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+    
+    <div class="buttons">
+        <button onclick="window.location.href='/dashboard'" class="return-btn">Return to Dashboard</button>
+    </div>
+</div>

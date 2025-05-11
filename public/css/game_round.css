@@ -1,0 +1,87 @@
+.game-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #343a40;
+}
+
+.players-container, .eliminated-container {
+  margin-bottom: 30px;
+}
+
+h3 {
+  border-bottom: 2px solid #dee2e6;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.player-list, .eliminated-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.player-card, .eliminated-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  width: calc(33.333% - 15px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.eliminated-card {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.vote-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.vote-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.control-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .player-card, .eliminated-card {
+    width: calc(50% - 15px);
+  }
+}
+
+@media (max-width: 576px) {
+  .player-card, .eliminated-card {
+    width: 100%;
+  }
+}
