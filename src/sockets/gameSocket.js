@@ -1,3 +1,5 @@
+'use strict'
+
 const games = {} // In-memory game store
 
 module.exports = (io, socket) => {

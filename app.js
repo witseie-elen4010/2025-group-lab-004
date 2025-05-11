@@ -1,14 +1,16 @@
 'use strict'
 
 const express = require('express')
-const connectDB = require('./config/db')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
 const session = require('express-session')
-const app = express()
+const http = require('http')
 const socketIO = require('socket.io')
 const gameSocket = require('./src/sockets/gameSocket')
+
+const app = express()
+const server = http.createServer(app)
 const io = socketIO(server, { cors: { origin: '*' } })
 
 // Configure middlewares
@@ -20,8 +22,6 @@ app.use(express.static(path.join(__dirname, 'public')))
 app.engine('ejs', ejsMate)
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
-
-const cors = require('cors')
 
 // Handling app use
 app.use(session({
