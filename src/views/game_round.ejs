@@ -1,0 +1,62 @@
+<% layout('home_layout') %>
+<link rel="stylesheet" href="/css/game_round.css">
+
+<div class="game-container">
+    <h2>Round <%= gameData.currentRound %></h2>
+    
+    <div class="players-container">
+        <h3>Players</h3>
+        <div class="player-list">
+            <% gameData.players.forEach(function(player) { %>
+                <% if (!player.isEliminated) { %>
+                    <div class="player-card">
+                        <h4><%= player.username %></h4>
+                        <% if (player.userId.toString() === userId) { %>
+                            <p>Your role: <%= player.role %></p>
+                            <p>Your word: <%= player.word %></p>
+                        <% } %>
+                        <% if (gameData.status === 'in-progress' && !playerHasVoted) { %>
+                            <form action="/vote" method="POST">
+                                <input type="hidden" name="gameId" value="<%= gameData._id %>">
+                                <input type="hidden" name="votedForId" value="<%= player.userId %>">
+                                <button type="submit" class="vote-btn" 
+                                    <%= player.userId.toString() === userId ? 'disabled' : '' %>>
+                                    Vote to Eliminate
+                                </button>
+                            </form>
+                        <% } %>
+                    </div>
+                <% } %>
+            <% }); %>
+        </div>
+    </div>
+    
+    <% if (gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
+        <div class="eliminated-container">
+            <h3>Eliminated Players</h3>
+            <div class="eliminated-list">
+                <% gameData.eliminatedPlayers.forEach(function(player) { %>
+                    <div class="eliminated-card">
+                        <h4><%= player.username %></h4>
+                        <p>Role: <%= player.role %></p>
+                        <p>Eliminated in round: <%= player.round %></p>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    <% } %>
+    
+    <div class="game-controls">
+        <% if (gameData.status === 'waiting' && isHost) { %>
+            <form action="/start-game-round" method="POST">
+                <input type="hidden" name="gameId" value="<%= gameData._id %>">
+                <button type="submit" class="control-btn">Start Game</button>
+            </form>
+        <% } else if (allPlayersVoted && isHost) { %>
+            <form action="/end-voting" method="POST">
+                <input type="hidden" name="gameId" value="<%= gameData._id %>">
+                <button type="submit" class="control-btn">End Voting & Reveal Results</button>
+            </form>
+        <% } %>
+    </div>
+</div>
