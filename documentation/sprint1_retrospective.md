@@ -1,12 +1,16 @@
 # Sprint 1: Game Foundation
 
 ## Completed User Stories
-
-- User Registration (Erick Chauke)
+A total of 4 stories were delivered.
+- User Registration (by Erick Chauke)
   - Created user model with secure password storage
   - Implemented registration form and validation
   - Added admin logging for new registrations
   - Set up tests for the feature
+
+- User Login and Authentication(by Tokelo Mphahlele)
+- Game session creation (by Mzudumile Kaizer)
+- Game joining feature (by Alungile Rawuka)
 
 ## Challenges Encountered
 
@@ -22,6 +26,6 @@
 
 ## Next Steps
 
-- Complete Login functionality
-- Integrate with Game Creation
-- Set up user sessions
+- Secret role and word assignment for each player
+- Word description phase
+- Player voting and elimination phase
