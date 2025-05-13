@@ -1,5 +1,6 @@
 <% layout('home_layout') %>
 <link rel="stylesheet" href="/css/start_game.css">
 <div class="center-container">
+    <h2>Game Session Code: <%= code %></h2>
     <button onclick="window.location.href='/game_round?gameId=<%= gameId %>'" class="my-button">Start Game</button>
 </div>

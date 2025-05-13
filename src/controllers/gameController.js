@@ -49,7 +49,7 @@ exports.postGame_Creation = async (req, res) => {
     
     logAction(`Game ${code} created`, user.username)
     
-    res.redirect(`/start_game?gameId=${game._id}`)
+    res.redirect(`/start_game?gameId=${game._id}&code=${code}`)
   } catch (error) {
     console.error('Game creation error:', error)
     res.render('game_creation', {
@@ -72,9 +72,11 @@ exports.getGame_Creation = (req, res) => {
 // Get game start page
 exports.getStartgame = (req, res) => {
   const gameId = req.query.gameId
+  const code = req.query.code
   res.render('start_page', {
     title: 'Start Game', 
-    gameId: gameId
+    gameId: gameId,
+    code: code
   })
 }
 
