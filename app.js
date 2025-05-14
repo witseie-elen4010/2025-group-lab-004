@@ -1,7 +1,7 @@
 'use strict'
 
 const express = require('express')
-const connectDB = require('./config/db')
+// const connectDB = require('./config/db')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
@@ -18,21 +18,21 @@ app.engine('ejs', ejsMate)
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
 
-const cors = require('cors');
+// const cors = require('cors');
 
 // Handling app use
 app.use(session({
   secret: 'your-secret-key', // Replace with a strong secret in production
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false} // Set `secure: true` if using HTTPS
-}));
+  cookie: { secure: false } // Set `secure: true` if using HTTPS
+}))
 
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
 
-//Game routes
+// Game routes
 const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/', gameRoutes)
 
@@ -54,7 +54,7 @@ app.use(function (err, req, res, next) {
 })
 
 // Server configuration
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 5000
 app.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
 })

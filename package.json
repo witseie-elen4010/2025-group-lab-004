@@ -54,5 +54,15 @@
   },
   "directories": {
     "test": "tests"
+  },
+  "scripts": {
+    "build": "echo 'No build needed for static site'"
   }
-}
+  
+  }
+
+
+
+
+
+
