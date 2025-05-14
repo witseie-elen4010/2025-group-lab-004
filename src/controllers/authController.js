@@ -58,7 +58,7 @@ exports.postRegister = async (req, res) => {
     // Log registration in admin log
     // logAction(`New user registered: ${username} (${email})`)
 
-    // Redirect to login page
+    // Redirect to login page (we'll create this later)
     res.redirect('/login')
   } catch (error) {
     console.error('Registration error:', error)
@@ -115,8 +115,9 @@ exports.postLogin = async (req, res) => {
 
     // Redirect to a main page
     req.session.save(() => {
-      res.redirect('/dashboard')
-    })
+      res.redirect('/dashboard');
+    });
+    
   } catch (error) {
     console.error('Login error:', error)
     res.render('login', {
@@ -126,15 +127,5 @@ exports.postLogin = async (req, res) => {
   }
 }
 
-// Logout Feature
 
-exports.getLogout = (req, res) => {
-  req.session.destroy(err => {
-    if (err) {
-      console.log(err)
-      return res.redirect('/')
-    }
-    res.clearCookie('connect.sid') // clears session cookie
-    res.redirect('/login') // redirect to login or homepage
-  })
-}
+
