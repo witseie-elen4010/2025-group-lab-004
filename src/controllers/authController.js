@@ -115,9 +115,8 @@ exports.postLogin = async (req, res) => {
 
     // Redirect to a main page
     req.session.save(() => {
-      res.redirect('/dashboard');
-    });
-    
+      res.redirect('/dashboard')
+    })
   } catch (error) {
     console.error('Login error:', error)
     res.render('login', {
@@ -127,5 +126,13 @@ exports.postLogin = async (req, res) => {
   }
 }
 
-
-
+// Logout Feature
+exports.logout = (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.log('Error destroying session:', err)
+      return res.redirect('/')
+    }
+    res.redirect('/') // To home page
+  })
+}
