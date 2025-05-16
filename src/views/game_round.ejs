@@ -239,3 +239,12 @@
   });
 </script>
 <% } %>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const code = sessionStorage.getItem('gameId')
+    const socket = io();
+    socket.emit('joinGame', code);
+    socket.on('message', msg=>{
+        console.log(msg);
+    })
+</script>
