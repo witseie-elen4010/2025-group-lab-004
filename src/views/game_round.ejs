@@ -244,10 +244,22 @@
 <% } %>
 <script src="/socket.io/socket.io.js"></script>
 <script>
+    // places to be updated
+    const playerCont = document.getElementsByClassName('row')[0];
+    
+
     const code = sessionStorage.getItem('gameId')
     const socket = io();
     socket.emit('joinGame', code);
     socket.on('message', msg=>{
-        console.log(msg);
-    })
+      const temp = document.createElement('div');
+      temp.innerHTML = `<div class="col-md-4 mb-3">
+                          <div class="player-card">
+                            <h4>${msg}</h4>
+                          </div>
+                        </div>`;
+      
+      // Append the first child of the temporary container
+      playerCont.appendChild(temp.firstElementChild);
+    });
 </script>

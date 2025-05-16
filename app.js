@@ -45,15 +45,24 @@ io.use(sharedSession(sessionMiddleware, {
 // socket.io handlers
 
 io.on('connect', socket=>{
-
+  
   const username = socket.handshake.session.username;
   console.log(`new player connected - ${username}`);
-
+  
+  // New player joining handler
   socket.on('joinGame', (gameId) => {
     socket.join(gameId);
     console.log(`User joined room: ${gameId}`);
+    socket.to(gameId).emit('message', username)
   });
   
+  // Word Description handler
+  socket.on('description', descrip => {
+    socket.to(gameId).emit('description', descrip)
+  })
+  
+  // start game handler
+
 });
 
 // Routes
