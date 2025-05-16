@@ -49,7 +49,7 @@ exports.postGame_Creation = async (req, res) => {
     
     logAction(`Game ${code} created`, user.username)
     
-    res.redirect(`/start_game?gameId=${game._id}`)
+    res.redirect(`/game_round?gameId=${game._id}`)
   } catch (error) {
     console.error('Game creation error:', error)
     res.render('game_creation', {
