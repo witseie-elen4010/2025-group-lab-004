@@ -161,7 +161,7 @@
       })
       .then(data => {
         // If game status has changed or round has advanced, reload the page
-        if (data.status === 'completed' || data.currentRound !== <%= gameData.currentRound %>) {
+        if (data.status === 'completed' || data.currentRound !== gameData.currentRound) {
           console.log('Game state changed! Reloading...');
           window.location.reload();
         }
