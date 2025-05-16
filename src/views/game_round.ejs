@@ -161,7 +161,9 @@
       })
       .then(data => {
         // If game status has changed or round has advanced, reload the page
+        
         if (data.status === 'completed' || data.currentRound !== gameData.currentRound) {
+      main
           console.log('Game state changed! Reloading...');
           window.location.reload();
         }
@@ -238,6 +240,7 @@
     clearInterval(statusInterval);
   });
 </script>
+
 <% } %>
 <script src="/socket.io/socket.io.js"></script>
 <script>
