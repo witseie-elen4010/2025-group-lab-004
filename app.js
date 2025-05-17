@@ -56,6 +56,9 @@ io.on('connect', socket=>{
   socket.on('joinGame', (gameId) => {
     socket.join(gameId);
     console.log(`User joined room: ${gameId}`);
+
+    // Notify all *other* players in the room (not the one who just joined)
+    socket.to(gameId).emit('message', `A new player ${username} has joined game ${gameId}`);
   });
   
 });
