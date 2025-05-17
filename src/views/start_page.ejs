@@ -26,9 +26,4 @@
       document.getElementById("startDescriptionBtn").style.display = "inline-block";
     }
   });
-
-  document.getElementById("startDescriptionBtn").onclick = () => {
-    socket.emit("startDescriptionPhase", { gameId });
-    window.location.href = `/game/${gameId}`;  
-  };
 </script>
