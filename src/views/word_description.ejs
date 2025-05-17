@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>Welcome <%= playerName %></h1>
+  <h2>Your word: <%= word %></h2>
+
+  <div id="turnStatus"></div>
+
+  <div id="clueInput" style="display: none;">
+    <input id="clue" placeholder="Enter your clue" />
+    <button onclick="submitClue()">Submit Clue</button>
+  </div>
+
+  <h3>Clues:</h3>
+  <ul id="clueList"></ul>
+
+  <script>
+    const socket = io();
+    const gameId = "<%= gameId %>";
+    const playerName = "<%= playerName %>";
+
+    socket.emit("joinGame", { gameId, playerName });
+
+    function submitClue() {
+      const clue = document.getElementById("clue").value;
+      socket.emit("submitClue", { gameId, clue });
+      document.getElementById("clueInput").style.display = "none";
+    }
+
+    socket.on("gameUpdate", (game) => {
+      const clues = game.clues.map(c => `<li><strong>${c.playerName}</strong>: ${c.text}</li>`).join('');
+      document.getElementById("clueList").innerHTML = clues;
+    });
+
+    socket.on("nextTurn", (player) => {
+      const isMyTurn = socket.id === player.id;
+      document.getElementById("turnStatus").innerText = isMyTurn ? "Your Turn!" : `${player.name}'s turn`;
+      document.getElementById("clueInput").style.display = isMyTurn ? "block" : "none";
+    });
+
+    socket.on("phaseChange", (phase) => alert("New phase: " + phase));
+    socket.on("error", (msg) => alert("Error: " + msg));
+  </script>
+</body>
+</html>
