@@ -20,19 +20,20 @@
     </div>
 </div>
 
-<!-- <script>
+<script>
     document.getElementById("form_to_create").addEventListener("submit", function(event) {
         
         event.preventDefault(); // Stop form from submitting normally
 
         const code = document.getElementById("code").value;
-
+        
         if (/^\d{6}$/.test(code)) {
-
-            window.location.href = '/create_game'; 
+            sessionStorage.setItem('gameId', code);
+            //window.location.href = '/create_game'; 
+            this.submit();
 
         } else {
             alert("Please enter a valid 6-digit numeric code.");
         }
     });
-</script> -->
+</script>

@@ -12,12 +12,14 @@ router.get('/join', (req, res) => {
   })
 })
 
+// Game flow routes
 router.post('/join', gameController.createJoinGame)
 
 // dashboard route
 router.get('/dashboard', gameController.getDashboard)
 
 // Game Creation routes
+router.get('/dashboard', gameController.getDashboard)
 router.get('/game_creation', gameController.getGame_Creation)
 router.post('/create_game', gameController.postGame_Creation)
 router.get('/start_game', gameController.getStartgame)
@@ -33,5 +35,13 @@ router.get('/:gameId', (req, res) => {
     word: 'apple' // Later: pass real word from game state
   })
 })
+
+module.exports = router
+// Game round and voting routes
+router.get('/game_round', gameController.getGameRound)
+router.post('/start-game-round', gameController.startGameRound)
+router.post('/vote', gameController.postVote)
+router.post('/end-voting', gameController.endVoting)
+router.get('/game_results', gameController.getGameResults)
 
 module.exports = router

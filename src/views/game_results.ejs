@@ -1,0 +1,78 @@
+<%- layout('layout', { css: ['game_results'] }) %>
+
+<div class="results-container">
+  <h2 class="text-center mb-4">Game Results</h2>
+  
+  <div class="winner-section mb-4">
+    <h3>Winners: <%= winningRole %></h3>
+    <div class="row">
+      <% winners.forEach(player => { %>
+        <div class="col-md-4 mb-3">
+          <div class="winner-card">
+            <h4><%= player.username %></h4>
+            <p>Role: <%= player.role.charAt(0).toUpperCase() + player.role.slice(1) %></p>
+            <% if (player.role === 'civilian') { %>
+              <p class="mb-0">Word: <%= gameData.civilianWord %></p>
+            <% } else if (player.role === 'undercover') { %>
+              <p class="mb-0">Word: <%= gameData.undercoverWord %></p>
+            <% } else { %>
+              <p class="mb-0">No word (Mr. White)</p>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+  
+  <div class="word-section mb-4 p-3 bg-light rounded">
+    <h3>Secret Words</h3>
+    <div class="row">
+      <div class="col-md-6">
+        <p><strong>Civilian Word:</strong> <%= gameData.civilianWord %></p>
+      </div>
+      <div class="col-md-6">
+        <p><strong>Undercover Word:</strong> <%= gameData.undercoverWord %></p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="all-players-section mb-4">
+    <h3>All Players</h3>
+    <div class="row">
+      <% gameData.players.forEach(player => { %>
+        <div class="col-md-4 mb-3">
+          <div class="player-result-card <%= player.isEliminated ? 'eliminated' : '' %>">
+            <h4><%= player.username %></h4>
+            <p>Role: <%= player.role.charAt(0).toUpperCase() + player.role.slice(1) %></p>
+            <p>Word: <%= player.word || 'No word (Mr. White)' %></p>
+            <% if (player.isEliminated) { %>
+              <p class="text-danger mb-0">Eliminated in Round: <%= player.eliminatedInRound %></p>
+            <% } else { %>
+              <p class="text-success mb-0">Survived all rounds</p>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+  
+  <div class="elimination-history mb-4">
+    <h3>Elimination History</h3>
+    <% if (gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
+      <ul class="list-group">
+        <% const sortedEliminations = [...gameData.eliminatedPlayers].sort((a, b) => a.round - b.round) %>
+        <% sortedEliminations.forEach((player, index) => { %>
+          <li class="list-group-item">
+            Round <%= player.round %>: <%= player.username %> (Role: <%= player.role %>) was eliminated
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p>No players were eliminated</p>
+    <% } %>
+  </div>
+  
+  <div class="buttons text-center mt-4">
+    <button class="return-btn btn btn-primary" onclick="window.location.href='/dashboard'">Return to Dashboard</button>
+  </div>
+</div>
