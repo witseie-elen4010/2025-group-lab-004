@@ -10,14 +10,11 @@ const sharedSession = require('express-socket.io-session')
 const socketIO = require('socket.io')
 const http = require('http')
 const app = express()
-const server = http.createServer(app)
-const io = socketIO(server)
-
-// Database connection
-connectDB()
-
-//
-const cors = require('cors')
+const http = require('http');
+const socketIo = require('socket.io');
+const server = http.createServer(app);
+const io = socketIo(server);
+const sharedSession = require('express-socket.io-session')
 
 // Configure middlewares
 app.use(bodyParser.json())
@@ -30,29 +27,38 @@ app.engine('ejs', ejsMate)
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
 
-// Session middleware setup
+const cors = require('cors');
+
 const sessionMiddleware = session({
-  secret: 'your-secret-key',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: true }
-})
-
-// socket.IO setup for session cookie
-io.use(sharedSession(sessionMiddleware, {
-  autoSave: true
-}))
-
-// Handling app use
-app.use(sessionMiddleware)
-
-// Handling app use
-app.use(session({
   secret: 'your-secret-key', // Replace with a strong secret in production
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: true }
-}))
+  cookie: { secure: false} // Set `secure: true` if using HTTPS
+});
+
+// Handling app use
+app.use(sessionMiddleware);
+
+// socket.IO setup for session cookie
+
+io.use(sharedSession(sessionMiddleware, {
+  autoSave: true
+}));
+
+
+// socket.io handlers
+
+io.on('connect', socket=>{
+
+  const username = socket.handshake.session.username;
+  console.log(`new player connected - ${username}`);
+
+  socket.on('joinGame', (gameId) => {
+    socket.join(gameId);
+    console.log(`User joined room: ${gameId}`);
+  });
+  
+});
 
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
@@ -81,7 +87,7 @@ app.use(function (err, req, res, next) {
 
 // Server configuration
 const port = process.env.PORT || 3000
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
 })
 
