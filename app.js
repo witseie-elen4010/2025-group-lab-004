@@ -54,7 +54,7 @@ app.use(function (err, req, res, next) {
 })
 
 // Server configuration
-const port = process.env.PORT || 5000
+const port = process.env.PORT || 3000
 app.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
 })
