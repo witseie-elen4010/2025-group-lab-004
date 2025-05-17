@@ -4,8 +4,8 @@
   "description": "Web Application for a social deduction game where players try to find Mr. White",
   "main": "app.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "jest --coverage"
   },
   "repository": {

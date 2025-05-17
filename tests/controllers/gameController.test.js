@@ -66,4 +66,3 @@ describe('joinGame controller with DI', () => {
     })
   })
 })
-

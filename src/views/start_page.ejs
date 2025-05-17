@@ -1,0 +1,29 @@
+<% layout('home_layout') %>
+<link rel="stylesheet" href="/css/start_game.css">
+<div class="center-container">
+    <button onclick="window.location.href='/game_round'" class="my-button">Start Game</button>
+
+    <div id="status" style="margin-top: 20px;"></div>
+
+    <button id="startDescriptionBtn" class="my-button" style="display: none;">
+        Start Description Phase
+    </button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const gameId = "<%= gameId %>";  
+  const playerName = "<%= playerName %>";  
+
+  document.getElementById("joinBtn").onclick = () => {
+    socket.emit("joinGame", { gameId, playerName });
+  };
+
+  socket.on("playerJoined", (players) => {
+    document.getElementById("status").innerText = `Players Joined: ${players.length}`;
+    if (players.length >= 3) {  
+      document.getElementById("startDescriptionBtn").style.display = "inline-block";
+    }
+  });
+</script>
