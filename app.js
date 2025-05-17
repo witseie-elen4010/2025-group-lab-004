@@ -44,6 +44,9 @@ io.use(sharedSession(sessionMiddleware, {
 
 // socket.io handlers
 
+var players = [];
+var player_turn = 0;
+
 io.on('connect', socket=>{
   
   const username = socket.handshake.session.username;
@@ -51,18 +54,34 @@ io.on('connect', socket=>{
   
   // New player joining handler
   socket.on('joinGame', (gameId) => {
+
     socket.join(gameId);
-    console.log(`User joined room: ${gameId}`);
+    socket.data.gameId = gameId;
+    players.push(socket.id);
+    console.log(socket.id)
+
+    console.log(`User joined room: ${players[0]}`);
     socket.to(gameId).emit('message', username)
   });
-  
+
   // Word Description handler
   socket.on('description', descrip => {
-    socket.to(gameId).emit('description', descrip)
-  })
+    //socket.to(gameId).emit('description', descrip)
+  });
   
   // start game handler
-
+  socket.on('start', ()=>{
+    console.log('starting the game');
+    // need an algorithm to assign words based on roles
+    const gameId = socket.data.gameId;
+    console.log(gameId);
+    players.forEach((sockid, index) => {
+      if (index == player_turn){
+        io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:true});
+      }
+      io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:false});
+    });
+  });
 });
 
 // Routes

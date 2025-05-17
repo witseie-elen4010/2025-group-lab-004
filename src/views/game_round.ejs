@@ -2,7 +2,7 @@
 <% layout('layout', { css: ['game_round'] }) %>
 
 <div class="game-container">
-  <h2 class="text-center mb-4">
+  <h2 class="text-center mb-4" id="game_status">
     <% if (gameData.status === 'waiting') { %>
       Game Lobby
     <% } else { %>
@@ -11,7 +11,7 @@
   </h2>
   
   <% if (gameData.status === 'waiting') { %>
-    <div class="alert alert-info mb-4">
+    <div class="alert alert-info mb-4" id="Player_word">
       <h4 class="alert-heading">Waiting for game to start</h4>
       <p>The host will start the game once all players have joined.</p>
       <p class="mb-0">Game Code: <strong><%= gameData.code %></strong></p>
@@ -32,14 +32,27 @@
     </div>
     
     <% if (isHost) { %>
-      <div class="game-controls text-center mt-5">
-        <form action="/start-game-round" method="POST">
+      <div class="alert alert-secondary mt-4 text-center" id="clue_cont">
+        <form action="/start-game-round" method="POST" id="start_form">
           <input type="hidden" name="gameId" value="<%= gameData._id %>">
-          <button type="submit" class="control-btn btn btn-primary btn-lg">Start Game</button>
+          <button type="submit" class="control-btn btn btn-primary btn-lg" id="start_btn">Start Game</button>
         </form>
       </div>
+      <script>
+        document.getElementById("start_form").addEventListener("submit", function(event) {
+      
+          event.preventDefault(); // Stop form from submitting normally
+
+          socket.emit('start');
+          
+          this.remove();
+          // const btn = document.getElementById("start_btn");
+          // btn.remove();
+        });
+        
+      </script>
     <% } else { %>
-      <div class="alert alert-secondary mt-4 text-center">
+      <div class="alert alert-secondary mt-4 text-center" id="clue_cont">
         <p class="mb-0">Waiting for the host to start the game...</p>
       </div>
     <% } %>
@@ -81,7 +94,7 @@
           </div>
         <% }) %>
       </div>
-    </div>
+    </div> 
 
     <% if (gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
       <div class="eliminated-container mb-4">
@@ -135,113 +148,7 @@
   </div>
 </div>
 
-<% if (gameData.status === 'in-progress' && playerHasVoted) { %>
-<script>
-  // Polling to check if round has advanced or game has completed
-  let pollCount = 0;
-  const maxPolls = 60; // 3 minutes max (3 seconds * 60)
-  
-  function checkRoundStatus() {
-    // Increment the poll count
-    pollCount++;
-    
-    // If we've polled too many times, slow down to prevent excessive server load
-    if (pollCount > maxPolls) {
-      clearInterval(roundInterval);
-      roundInterval = setInterval(checkRoundStatus, 10000); // Every 10 seconds after 3 minutes
-      return;
-    }
-    
-    fetch('/api/game-status?gameId=<%= gameData._id %>')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        // If game status has changed or round has advanced, reload the page
-        
-        if (data.status === 'completed' || data.currentRound !== gameData.currentRound) {
-      main
-          console.log('Game state changed! Reloading...');
-          window.location.reload();
-        }
-      })
-      .catch(err => {
-        console.error('Error checking round status:', err);
-      });
-  }
 
-  // Check every 3 seconds
-  const roundInterval = setInterval(checkRoundStatus, 3000);
-
-  // Clean up interval when leaving the page
-  window.addEventListener('beforeunload', function() {
-    clearInterval(roundInterval);
-  });
-</script>
-<% } %>
-
-<% if (gameData.status === 'waiting' && !isHost) { %>
-<script>
-  // Polling function to check game status
-  let checkCount = 0;
-  const maxChecks = 60; // 3 minutes max (3 seconds * 60)
-  
-  function checkGameStatus() {
-    // Increment the check count
-    checkCount++;
-    
-    // If we've checked too many times, stop polling to prevent excessive server load
-    if (checkCount > maxChecks) {
-      console.log('Reached maximum check attempts. Stopping polling.');
-      clearInterval(statusInterval);
-      
-      // Add a manual refresh button
-      const waitingDiv = document.querySelector('.alert-secondary');
-      if (waitingDiv) {
-        waitingDiv.innerHTML += '<p class="mt-3">It\'s taking longer than expected. <button class="btn btn-sm btn-info" onclick="window.location.reload()">Refresh Page</button></p>';
-      }
-      return;
-    }
-    
-    fetch('/api/game-status?gameId=<%= gameData._id %>')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        // If game status has changed to in-progress, reload the page
-        if (data.status === 'in-progress') {
-          console.log('Game has started! Reloading...');
-          window.location.reload();
-        }
-      })
-      .catch(err => {
-        console.error('Error checking game status:', err);
-        // If there's an error, try a few more times but slow down the polling
-        if (checkCount % 5 === 0) {
-          const waitingDiv = document.querySelector('.alert-secondary');
-          if (waitingDiv) {
-            waitingDiv.innerHTML = '<p class="mb-0">Waiting for the host to start the game... Connection issues detected. <button class="btn btn-sm btn-info" onclick="window.location.reload()">Refresh Page</button></p>';
-          }
-        }
-      });
-  }
-
-  // Check every 3 seconds
-  const statusInterval = setInterval(checkGameStatus, 3000);
-
-  // Clean up interval when leaving the page
-  window.addEventListener('beforeunload', function() {
-    clearInterval(statusInterval);
-  });
-</script>
-
-<% } %>
 <script src="/socket.io/socket.io.js"></script>
 <script>
     // places to be updated
@@ -262,4 +169,57 @@
       // Append the first child of the temporary container
       playerCont.appendChild(temp.firstElementChild);
     });
+    
+     
+    socket.on('your_info', (data)=>{
+      
+      console.log(data.word);
+      let word_cont = document.getElementById("Player_word");
+      word_cont.innerHTML = `<h4>Game Started</h4>
+                             <p>Your Word: <strong>${data.word}</strong></p>`;
+      
+      let game_round = document.getElementById("game_status");
+      game_round.innerHTML = `GAME ROUND ${data.round}`;
+
+      if(data.isMyTurn){
+
+        let form_clue_cont = document.getElementById("clue_cont");
+        form_clue_cont.innerHTML = `<form id='form_clue'>
+                                        Description:
+                                        <input type='text' id='clue' required>
+                                        <button type='submit'>Submit</button>
+                                    </form>`;
+        
+        // Submit the description to other players.
+        document.getElementById("form_clue").addEventListener("submit", function(event) {
+          
+          event.preventDefault(); // Stop form from submitting normally
+          
+          let clue = document.getElementById('clue').value;
+
+          socket.emit('description', clue)
+          
+          this.remove();
+        }); 
+
+      }
+    });
+    
+    // show the form when is you turn
+    socket.on('myTurn', ()=>{
+      let form_clue_cont = document.getElementById("clue_cont");
+      form_clue_cont.innerHTML = `<form id='form_clue'>
+                                      Description:
+                                      <input type='text' id='clue' required>
+                                      <button type='submit'>Submit</button>
+                                  </form>`;
+    });
+     
+    
+    
+    
+    // socket.on('', ()=>{
+
+    // })
+    
 </script>
