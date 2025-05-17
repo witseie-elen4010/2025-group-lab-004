@@ -52,5 +52,12 @@ exports.postGame_Creation = async (req, res) => {
 }
 
 exports.getStartgame =  (req, res) => {
-  res.render('start_page', {title: 'start game page'})
+  const gameId = req.query.gameId || 'defaultGameId' // will automaticll generate one later
+  const playerName = req.query.playerName || 'Guest'
+
+  res.render('start_page', {
+    title: 'start game page',
+    gameId,
+    playerName
+  })
 }
