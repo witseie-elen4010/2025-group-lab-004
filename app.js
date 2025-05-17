@@ -20,6 +20,16 @@ app.set('view engine', 'ejs')
 
 const cors = require('cors')
 
+const sessionMiddleware = session({
+  secret: 'your-secret-key', // Replace with a strong secret in production
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // Set `secure: true` if using HTTPS
+})
+
+// Handling app use
+app.use(sessionMiddleware)
+
 // Handling app use
 app.use(session({
   secret: 'your-secret-key', // Replace with a strong secret in production
