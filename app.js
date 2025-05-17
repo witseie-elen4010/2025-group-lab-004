@@ -6,6 +6,9 @@ const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
 const session = require('express-session')
+const sharedSession = require('express-socket.io-session')
+const socketIO = require('socket.io')
+const http = require('http')
 const app = express()
 const http = require('http');
 const socketIo = require('socket.io');
@@ -17,6 +20,7 @@ const sharedSession = require('express-socket.io-session')
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, 'public')))
+app.use(cors())
 //
 // View engine setup
 app.engine('ejs', ejsMate)
@@ -60,7 +64,7 @@ io.on('connect', socket=>{
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
 
-//Game routes
+// Game routes
 const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/', gameRoutes)
 
