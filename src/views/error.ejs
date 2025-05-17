@@ -1,0 +1,30 @@
+<% layout('layout') %>
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header bg-danger text-white">
+          <h2 class="mb-0"><%= error.status %> Error</h2>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-danger">
+            <h4><%= error.message %></h4>
+          </div>
+         
+          <div class="mt-4 text-center">
+            <a href="/" class="btn btn-primary">Return to Home</a>
+            <button class="btn btn-secondary ml-2" onclick="history.back()">Go Back</button>
+          </div>
+         
+          <% if (process.env.NODE_ENV !== 'production' && error.stack) { %>
+            <div class="mt-4">
+              <h5>Stack Trace:</h5>
+              <pre class="bg-light p-3"><%= error.stack %></pre>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

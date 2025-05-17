@@ -1,62 +1,253 @@
-<% layout('home_layout') %>
-<link rel="stylesheet" href="/css/game_round.css">
+<!-- src/views/game_round.ejs - Fixed version -->
+<% layout('layout', { css: ['game_round'] }) %>
 
 <div class="game-container">
-    <h2>Round <%= gameData.currentRound %></h2>
-    
-    <div class="players-container">
-        <h3>Players</h3>
-        <div class="player-list">
-            <% gameData.players.forEach(function(player) { %>
-                <% if (!player.isEliminated) { %>
-                    <div class="player-card">
-                        <h4><%= player.username %></h4>
-                        <% if (player.userId.toString() === userId) { %>
-                            <p>Your role: <%= player.role %></p>
-                            <p>Your word: <%= player.word %></p>
-                        <% } %>
-                        <% if (gameData.status === 'in-progress' && !playerHasVoted) { %>
-                            <form action="/vote" method="POST">
-                                <input type="hidden" name="gameId" value="<%= gameData._id %>">
-                                <input type="hidden" name="votedForId" value="<%= player.userId %>">
-                                <button type="submit" class="vote-btn" 
-                                    <%= player.userId.toString() === userId ? 'disabled' : '' %>>
-                                    Vote to Eliminate
-                                </button>
-                            </form>
-                        <% } %>
-                    </div>
-                <% } %>
-            <% }); %>
-        </div>
+  <h2 class="text-center mb-4">
+    <% if (gameData.status === 'waiting') { %>
+      Game Lobby
+    <% } else { %>
+      Game Round <%= gameData.currentRound %>
+    <% } %>
+  </h2>
+  
+  <% if (gameData.status === 'waiting') { %>
+    <div class="alert alert-info mb-4">
+      <h4 class="alert-heading">Waiting for game to start</h4>
+      <p>The host will start the game once all players have joined.</p>
+      <p class="mb-0">Game Code: <strong><%= gameData.code %></strong></p>
     </div>
     
-    <% if (gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
-        <div class="eliminated-container">
-            <h3>Eliminated Players</h3>
-            <div class="eliminated-list">
-                <% gameData.eliminatedPlayers.forEach(function(player) { %>
-                    <div class="eliminated-card">
-                        <h4><%= player.username %></h4>
-                        <p>Role: <%= player.role %></p>
-                        <p>Eliminated in round: <%= player.round %></p>
-                    </div>
-                <% }); %>
-            </div>
+    <h3>Players in Lobby</h3>
+    <div class="row">
+      <% gameData.players.forEach(player => { %>
+        <div class="col-md-4 mb-3">
+          <div class="player-card">
+            <h4><%= player.username %></h4>
+            <% if (player.userId.toString() === gameData.players[0].userId.toString()) { %>
+              <span class="badge badge-primary">Host</span>
+            <% } %>
+          </div>
         </div>
+      <% }) %>
+    </div>
+    
+    <% if (isHost) { %>
+      <div class="game-controls text-center mt-5">
+        <form action="/start-game-round" method="POST">
+          <input type="hidden" name="gameId" value="<%= gameData._id %>">
+          <button type="submit" class="control-btn btn btn-primary btn-lg">Start Game</button>
+        </form>
+      </div>
+    <% } else { %>
+      <div class="alert alert-secondary mt-4 text-center">
+        <p class="mb-0">Waiting for the host to start the game...</p>
+      </div>
+    <% } %>
+  <% } else { %>
+    <% if (userId && gameData.players) { %>
+      <% const currentPlayer = gameData.players.find(p => p.userId.toString() === userId) %>
+      <% if (currentPlayer) { %>
+        <div class="player-info alert alert-info mb-4">
+          <p><strong>Your Role:</strong> <%= currentPlayer.role.charAt(0).toUpperCase() + currentPlayer.role.slice(1) %></p>
+          <% if (currentPlayer.word) { %>
+            <p class="mb-0"><strong>Your Word:</strong> <%= currentPlayer.word %></p>
+          <% } else if (currentPlayer.role === 'mrwhite') { %>
+            <p class="mb-0"><strong>You are Mr. White!</strong> You don't know the word. Try to guess it from other players' descriptions.</p>
+          <% } %>
+        </div>
+      <% } %>
+    <% } %>
+
+    <div class="players-container mb-5">
+      <h3>Active Players</h3>
+      <div class="row">
+        <% gameData.players.filter(p => !p.isEliminated).forEach(player => { %>
+          <div class="col-md-4 mb-3">
+            <div class="player-card">
+              <h4><%= player.username %></h4>
+              <% if (player.description) { %>
+                <p>Description: <%= player.description %></p>
+              <% } %>
+              <% if (!playerHasVoted && player.userId.toString() !== userId && !player.isEliminated) { %>
+                <form action="/vote" method="POST">
+                  <input type="hidden" name="gameId" value="<%= gameData._id %>">
+                  <input type="hidden" name="votedForId" value="<%= player.userId %>">
+                  <button type="submit" class="vote-btn btn btn-danger btn-block">Vote to Eliminate</button>
+                </form>
+              <% } else if (playerHasVoted && player.userId.toString() !== userId) { %>
+                <button class="vote-btn btn btn-secondary btn-block" disabled>Already Voted</button>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <% if (gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
+      <div class="eliminated-container mb-4">
+        <h3>Eliminated Players</h3>
+        <div class="row">
+          <% gameData.eliminatedPlayers.forEach(player => { %>
+            <div class="col-md-4 mb-3">
+              <div class="eliminated-card">
+                <h4><%= player.username %></h4>
+                <p>Role: <%= player.role.charAt(0).toUpperCase() + player.role.slice(1) %></p>
+                <p class="mb-0">Eliminated in Round: <%= player.round %></p>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (isHost && allPlayersVoted && gameData.status === 'in-progress') { %>
+      <div class="game-controls text-center mt-4 mb-4">
+        <form action="/end-voting" method="POST">
+          <input type="hidden" name="gameId" value="<%= gameData._id %>">
+          <button type="submit" class="control-btn btn btn-primary btn-lg">End Voting & Continue</button>
+        </form>
+      </div>
     <% } %>
     
-    <div class="game-controls">
-        <% if (gameData.status === 'waiting' && isHost) { %>
-            <form action="/start-game-round" method="POST">
-                <input type="hidden" name="gameId" value="<%= gameData._id %>">
-                <button type="submit" class="control-btn">Start Game</button>
-            </form>
-        <% } else if (allPlayersVoted && isHost) { %>
-            <form action="/end-voting" method="POST">
-                <input type="hidden" name="gameId" value="<%= gameData._id %>">
-                <button type="submit" class="control-btn">End Voting & Reveal Results</button>
-            </form>
-        <% } %>
-    </div>
+    <% if (playerHasVoted && !allPlayersVoted) { %>
+      <div class="alert alert-info mt-4 text-center">
+        <p class="mb-0">Waiting for all players to vote...</p>
+      </div>
+    <% } %>
+    
+    <% if (gameData.currentRound > 1 && gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
+      <div class="alert alert-secondary mt-3">
+        <p>Votes from previous round: </p>
+        <ul class="vote-history">
+          <% const prevRoundVotes = gameData.votes.filter(v => v.round === gameData.currentRound - 1) %>
+          <% prevRoundVotes.forEach(vote => { %>
+            <% const voter = gameData.players.find(p => p.userId.toString() === vote.voterId.toString()) %>
+            <% const votedFor = gameData.players.find(p => p.userId.toString() === vote.votedForId.toString()) %>
+            <li><%= voter ? voter.username : 'Unknown player' %> voted for <%= votedFor ? votedFor.username : 'Unknown player' %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+  <% } %>
+  
+  <div class="mt-4 text-center">
+    <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+  </div>
 </div>
+
+<% if (gameData.status === 'in-progress' && playerHasVoted) { %>
+<script>
+  // Polling to check if round has advanced or game has completed
+  let pollCount = 0;
+  const maxPolls = 60; // 3 minutes max (3 seconds * 60)
+  
+  function checkRoundStatus() {
+    // Increment the poll count
+    pollCount++;
+    
+    // If we've polled too many times, slow down to prevent excessive server load
+    if (pollCount > maxPolls) {
+      clearInterval(roundInterval);
+      roundInterval = setInterval(checkRoundStatus, 10000); // Every 10 seconds after 3 minutes
+      return;
+    }
+    
+    fetch('/api/game-status?gameId=<%= gameData._id %>')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // If game status has changed or round has advanced, reload the page
+        
+        if (data.status === 'completed' || data.currentRound !== gameData.currentRound) {
+      main
+          console.log('Game state changed! Reloading...');
+          window.location.reload();
+        }
+      })
+      .catch(err => {
+        console.error('Error checking round status:', err);
+      });
+  }
+
+  // Check every 3 seconds
+  const roundInterval = setInterval(checkRoundStatus, 3000);
+
+  // Clean up interval when leaving the page
+  window.addEventListener('beforeunload', function() {
+    clearInterval(roundInterval);
+  });
+</script>
+<% } %>
+
+<% if (gameData.status === 'waiting' && !isHost) { %>
+<script>
+  // Polling function to check game status
+  let checkCount = 0;
+  const maxChecks = 60; // 3 minutes max (3 seconds * 60)
+  
+  function checkGameStatus() {
+    // Increment the check count
+    checkCount++;
+    
+    // If we've checked too many times, stop polling to prevent excessive server load
+    if (checkCount > maxChecks) {
+      console.log('Reached maximum check attempts. Stopping polling.');
+      clearInterval(statusInterval);
+      
+      // Add a manual refresh button
+      const waitingDiv = document.querySelector('.alert-secondary');
+      if (waitingDiv) {
+        waitingDiv.innerHTML += '<p class="mt-3">It\'s taking longer than expected. <button class="btn btn-sm btn-info" onclick="window.location.reload()">Refresh Page</button></p>';
+      }
+      return;
+    }
+    
+    fetch('/api/game-status?gameId=<%= gameData._id %>')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // If game status has changed to in-progress, reload the page
+        if (data.status === 'in-progress') {
+          console.log('Game has started! Reloading...');
+          window.location.reload();
+        }
+      })
+      .catch(err => {
+        console.error('Error checking game status:', err);
+        // If there's an error, try a few more times but slow down the polling
+        if (checkCount % 5 === 0) {
+          const waitingDiv = document.querySelector('.alert-secondary');
+          if (waitingDiv) {
+            waitingDiv.innerHTML = '<p class="mb-0">Waiting for the host to start the game... Connection issues detected. <button class="btn btn-sm btn-info" onclick="window.location.reload()">Refresh Page</button></p>';
+          }
+        }
+      });
+  }
+
+  // Check every 3 seconds
+  const statusInterval = setInterval(checkGameStatus, 3000);
+
+  // Clean up interval when leaving the page
+  window.addEventListener('beforeunload', function() {
+    clearInterval(statusInterval);
+  });
+</script>
+
+<% } %>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const code = sessionStorage.getItem('gameId')
+    const socket = io();
+    socket.emit('joinGame', code);
+    socket.on('message', msg=>{
+        console.log(msg);
+    })
+</script>
