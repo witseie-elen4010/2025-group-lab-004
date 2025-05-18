@@ -66,6 +66,6 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'FindMrWhite'
+          app-name: 'findmrwhite-app'
           slot-name: 'Production'
           package: .
