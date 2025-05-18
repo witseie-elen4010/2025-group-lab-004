@@ -42,18 +42,56 @@ io.use(sharedSession(sessionMiddleware, {
 
 // socket.io handlers
 
-io.on('connect', socket => {
-  const username = socket.handshake.session.username
-  console.log(`new player connected - ${username}`)
+var players = [];
+var player_turn = 0;
 
+io.on('connect', socket=>{
+  
+  const username = socket.handshake.session.username;
+  console.log(`new player connected - ${username}`);
+  
+  // New player joining handler
   socket.on('joinGame', (gameId) => {
-    socket.join(gameId)
-    console.log(`User joined room: ${gameId}`)
 
-    // Notify all *other* players in the room (not the one who just joined)
-    socket.to(gameId).emit('message', `A new player ${username} has joined game ${gameId}`)
-  })
-})
+    socket.join(gameId);
+    socket.data.gameId = gameId;
+    players.push(socket.id);
+    console.log(socket.id)
+
+    console.log(`User joined room: ${players[0]}`);
+    socket.to(gameId).emit('message', username)
+  });
+
+  // Word Description handler
+  socket.on('description', descrip => {
+    
+    player_turn++;
+    players.forEach((sockid, index) => {
+      
+      if (index == player_turn){
+        io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
+        io.to(sockid).emit('myTurn');
+        
+      }
+      else io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
+    });
+  });
+  
+  // start game handler
+  socket.on('start', ()=>{
+    console.log('starting the game');
+    // need an algorithm to assign words based on roles
+    // code here
+    // Sending ifomation to players  for UI update
+    players.forEach((sockid, index) => {
+      if (index == player_turn){
+        io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:true});
+      }
+      else io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:false});
+    });
+  });
+});
+
 
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
