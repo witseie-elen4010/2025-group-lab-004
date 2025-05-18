@@ -13,6 +13,9 @@ const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
 
+app.use(express.urlencoded({ extended: true }))
+app.use(express.json())
+
 // Configure middlewares
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -81,10 +84,15 @@ app.use(function (err, req, res, next) {
 })
 
 // Server configuration
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 5000
 require('./config/db')()
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
+})
+
+app.use((err, req, res, next) => {
+  console.error(err.stack) // log the error to terminal
+  res.status(500).send('Something broke!')
 })
 
 module.exports = app
