@@ -1,46 +1,44 @@
 'use strict'
 
 const express = require('express')
-const connectDB = require('./config/db')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
 const session = require('express-session')
-const app = express()
-const http = require('http');
-const socketIo = require('socket.io');
-const server = http.createServer(app);
-const io = socketIo(server);
 const sharedSession = require('express-socket.io-session')
+const socketIO = require('socket.io')
+const http = require('http')
+const cors = require('cors')
+const app = express()
+const server = http.createServer(app)
+const io = socketIO(server)
 
 // Configure middlewares
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, 'public')))
+app.use(cors())
 //
 // View engine setup
 app.engine('ejs', ejsMate)
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
 
-const cors = require('cors');
-
 const sessionMiddleware = session({
   secret: 'your-secret-key', // Replace with a strong secret in production
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false} // Set `secure: true` if using HTTPS
-});
+  cookie: { secure: false } // Set `secure: true` if using HTTPS
+})
 
 // Handling app use
-app.use(sessionMiddleware);
+app.use(sessionMiddleware)
 
 // socket.IO setup for session cookie
 
 io.use(sharedSession(sessionMiddleware, {
   autoSave: true
-}));
-
+}))
 
 // socket.io handlers
 
@@ -94,11 +92,12 @@ io.on('connect', socket=>{
   });
 });
 
+
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
 
-//Game routes
+// Game routes
 const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/', gameRoutes)
 
@@ -121,6 +120,7 @@ app.use(function (err, req, res, next) {
 
 // Server configuration
 const port = process.env.PORT || 3000
+require('./config/db')()
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
 })
