@@ -44,4 +44,32 @@ router.post('/vote', gameController.postVote)
 router.post('/end-voting', gameController.endVoting)
 router.get('/game_results', gameController.getGameResults)
 
+/// Game Invitation System/////////s
+const Invitation = require('../models/Game_Invitation')
+
+// Dashboard route
+router.get('/dashboard', async (req, res) => {
+  try {
+    const userId = req.session.userId
+    if (!userId) return res.redirect('/login')
+
+    const invitations = await Invitation.find({
+      toUserId: userId,
+      status: 'pending'
+    }).populate('fromUserId gameId')
+
+    const games = await Game.find({ createdBy: userId })
+
+    res.render('dashboard', { invitations, games })
+  } catch (error) {
+    console.error(error)
+    res.status(500).send('Internal Server Error')
+  }
+})
+
+// POST routes
+router.post('/invitations/send', gameController.sendInvitation)
+router.post('/invitation/:invitationId/accept', gameController.acceptInvitation)
+router.post('/invitation/:invitationId/decline', gameController.declineInvitation)
+
 module.exports = router
