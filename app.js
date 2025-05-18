@@ -66,20 +66,30 @@ io.on('connect', socket=>{
 
   // Word Description handler
   socket.on('description', descrip => {
-    //socket.to(gameId).emit('description', descrip)
+    
+    player_turn++;
+    players.forEach((sockid, index) => {
+      
+      if (index == player_turn){
+        io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
+        io.to(sockid).emit('myTurn');
+        
+      }
+      else io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
+    });
   });
   
   // start game handler
   socket.on('start', ()=>{
     console.log('starting the game');
     // need an algorithm to assign words based on roles
-    const gameId = socket.data.gameId;
-    console.log(gameId);
+    // code here
+    // Sending ifomation to players  for UI update
     players.forEach((sockid, index) => {
       if (index == player_turn){
         io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:true});
       }
-      io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:false});
+      else io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:false});
     });
   });
 });

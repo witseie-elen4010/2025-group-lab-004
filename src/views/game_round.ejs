@@ -49,12 +49,14 @@
           // const btn = document.getElementById("start_btn");
           // btn.remove();
         });
-        
+
       </script>
+      <div id="Clues"></div>
     <% } else { %>
       <div class="alert alert-secondary mt-4 text-center" id="clue_cont">
         <p class="mb-0">Waiting for the host to start the game...</p>
       </div>
+      <div id="Clues"></div>
     <% } %>
   <% } else { %>
     <% if (userId && gameData.players) { %>
@@ -158,6 +160,7 @@
     const code = sessionStorage.getItem('gameId')
     const socket = io();
     socket.emit('joinGame', code);
+
     socket.on('message', msg=>{
       const temp = document.createElement('div');
       temp.innerHTML = `<div class="col-md-4 mb-3">
@@ -185,6 +188,7 @@
 
         let form_clue_cont = document.getElementById("clue_cont");
         form_clue_cont.innerHTML = `<form id='form_clue'>
+                                        <h3>Your Turn</h3>
                                         Description:
                                         <input type='text' id='clue' required>
                                         <button type='submit'>Submit</button>
@@ -204,6 +208,12 @@
 
       }
     });
+     
+    socket.on('description', desc => {
+      const temp = document.createElement('div');
+      temp.innerHTML = `<p>${desc}</p>`
+      document.getElementById('Clues').appendChild(temp.firstChild);
+    })
     
     // show the form when is you turn
     socket.on('myTurn', ()=>{
@@ -213,6 +223,19 @@
                                       <input type='text' id='clue' required>
                                       <button type='submit'>Submit</button>
                                   </form>`;
+                                  
+      // Submit the description to other players.
+      document.getElementById("form_clue").addEventListener("submit", function(event) {
+          
+          event.preventDefault(); // Stop form from submitting normally
+          
+          let clue = document.getElementById('clue').value;
+
+          socket.emit('description', clue)
+          
+          this.remove();
+        }); 
+
     });
      
     
