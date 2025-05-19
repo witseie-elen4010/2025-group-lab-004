@@ -77,6 +77,14 @@ io.on('connect', socket=>{
       }
       else io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
     });
+
+    if (player_turn == players.length){
+      console.log('Inside vote');
+      players.forEach((sockid, index) => {
+       io.to(sockid).emit('voteplayer');
+      });
+
+    }
   });
   
   // start game handler
@@ -92,6 +100,11 @@ io.on('connect', socket=>{
       else io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:false});
     });
   });
+
+  socket.on('eliminate', user=>{
+    console.log(`${username} voted for ${user}`);
+  });
+
 });
 
 // Routes
