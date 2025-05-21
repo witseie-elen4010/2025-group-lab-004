@@ -43,45 +43,125 @@ io.use(sharedSession(sessionMiddleware, {
 // socket.io handlers
 
 const players = []
+<<<<<<< Updated upstream
 let player_turn = 0
+=======
+// const player_turn = 0
+const games = new Map()
+const wordPairs = [
+  { civilian: 'Laptop', undercover: 'Tablet' },
+  { civilian: 'Apple', undercover: 'Orange' },
+  { civilian: 'Train', undercover: 'Subway' },
+  { civilian: 'Coffee', undercover: 'Tea' },
+  { civilian: 'Ocean', undercover: 'Lake' },
+  { civilian: 'Pencil', undercover: 'Pen' },
+  { civilian: 'Panda', undercover: 'Bear' },
+  { civilian: 'Moon', undercover: 'Sun' }
+]
+>>>>>>> Stashed changes
 
 io.on('connect', socket => {
   const username = socket.handshake.session.username
   console.log(`new player connected - ${username}`)
 
-  // New player joining handler
+  // player joining handler
   socket.on('joinGame', (gameId) => {
     socket.join(gameId)
     socket.data.gameId = gameId
-    players.push(socket.id)
-    console.log(socket.id)
 
-    console.log(`User joined room: ${players[0]}`)
+    if (!games.has(gameId)) {
+      games.set(gameId, {
+        players: [],
+        turn: 0,
+        roles: {}
+      })
+    }
+
+    const game = games.get(gameId)
+    game.players.push(socket.id)
+
+    console.log(`User ${socket.id} joined room ${gameId}`)
     socket.to(gameId).emit('message', username)
   })
 
   // Word Description handler
+
   socket.on('description', descrip => {
-    player_turn++
-    players.forEach((sockid, index) => {
-      if (index == player_turn) {
-        io.to(sockid).emit('description', `clue from ${username}: ${descrip}`)
-        io.to(sockid).emit('myTurn')
-      } else io.to(sockid).emit('description', `clue from ${username}: ${descrip}`)
+    const gameId = socket.data.gameId
+    const game = games.get(gameId)
+    const username = socket.handshake.session.username
+
+    if (!game.descriptions) {
+      game.descriptions = new Map()
+    }
+
+    game.descriptions.set(socket.id, descrip)
+
+    // Broadcast the description
+    game.players.forEach((sockid, index) => {
+      io.to(sockid).emit('description', `clue from ${username}: ${descrip}`)
     })
+
+    // Check if all players have described
+    if (game.descriptions.size === game.players.length) {
+      io.to(gameId).emit('phaseChanged', {
+        phase: 'voting',
+        message: 'All players have submitted their descriptions. Voting starts now!'
+      })
+
+      // Advance turn
+      game.turn = (game.turn + 1) % game.players.length
+
+      // Optionally reset descriptions
+      game.descriptions = new Map()
+
+      // Notify next player it’s their turn
+      const nextPlayerSocketId = game.players[game.turn]
+      io.to(nextPlayerSocketId).emit('myTurn')
+    }
   })
 
   // start game handler
+
   socket.on('start', () => {
-    console.log('starting the game')
-    // need an algorithm to assign words based on roles
-    // code here
-    // Sending ifomation to players  for UI update
-    players.forEach((sockid, index) => {
-      if (index == player_turn) {
-        io.to(sockid).emit('your_info', { word: 'Laptop', round: '1', isMyTurn: true })
-      } else io.to(sockid).emit('your_info', { word: 'Laptop', round: '1', isMyTurn: false })
+    const gameId = socket.data.gameId
+    const game = games.get(gameId)
+
+    if (!game || game.players.length < 2) {
+      return socket.emit('error', 'Not enough players to start.')
+    }
+
+    game.turn = 0
+    const playerSockets = game.players
+
+    // 1. Randomly select one word pair
+    const randomIndex = Math.floor(Math.random() * wordPairs.length)
+    const { civilian: wordCivilian, undercover: wordUndercover } = wordPairs[randomIndex]
+
+    // 2. Randomly assign one player as undercover
+    const undercoverIndex = Math.floor(Math.random() * playerSockets.length)
+    const undercoverSocketId = playerSockets[undercoverIndex]
+
+    // 3. Send word info to each player
+    game.roles = {}
+    playerSockets.forEach((sockid, index) => {
+      const isUndercover = sockid === undercoverSocketId
+      const isMyTurn = index === game.turn
+
+      game.roles[sockid] = isUndercover ? 'undercover' : 'civilian'
+
+      io.to(sockid).emit('your_info', {
+        word: isUndercover ? wordUndercover : wordCivilian,
+        round: 1,
+        isMyTurn
+      })
+
+      if (isMyTurn) {
+        io.to(sockid).emit('myTurn')
+      }
     })
+
+    console.log(`Undercover is: ${undercoverSocketId}, Word Pair: ${wordCivilian} / ${wordUndercover}`)
   })
 })
 

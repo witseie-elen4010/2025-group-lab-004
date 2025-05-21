@@ -36,6 +36,11 @@ const gameSchema = new mongoose.Schema({
     enum: ['waiting', 'in-progress', 'completed'],
     default: 'waiting'
   },
+  phase: {
+    type: String,
+    enum: ['description', 'voting', 'results'],
+    default: 'description'
+  },
   votes: [{
     round: Number,
     voterId: mongoose.Schema.Types.ObjectId,
@@ -54,6 +59,24 @@ const gameSchema = new mongoose.Schema({
     default: Date.now
   }
 })
+// models/Game.js
+
+gameSchema.statics.setGamePhase = async function (gameId, phase) {
+  const game = await this.findById(gameId)
+  if (!game) throw new Error('Game not found')
+
+  if (phase === 'voting') {
+    game.players.forEach(player => {
+      // Clear descriptions for the next round if needed
+      player.description = player.description || ''
+    })
+    game.phase = 'voting'
+  } else {
+    throw new Error('Unsupported game phase')
+  }
+
+  await game.save()
+}
 
 const Game = mongoose.model('Game', gameSchema)
 module.exports = Game
