@@ -310,7 +310,6 @@ exports.getWordDescription = async (req, res) => {
       playerName: player.username,
       word: player.word || 'No word assigned'
     })
-    return res.redirect(`/game_round?gameId=${gameId}`)
   } catch (error) {
     console.error('Error rendering word description:', error)
     res.redirect('/dashboard')
@@ -345,7 +344,14 @@ exports.postWordDescription = async (req, res) => {
       .every(p => p.description)
 
     if (allDescribed) {
+      await Game.setGamePhase(gameId, 'voting')
+      io.to(gameId).emit('phaseChanged', {
+        phase: 'voting',
+        message: 'All players have submitted their descriptions. Voting phase begins now!'
+      })
       return res.redirect(`/game_round?gameId=${gameId}`)
+    } else {
+      return res.redirect(`/word_description?gameId=${gameId}`)
     }
   } catch (error) {
     console.error('Error submitting description:', error)
