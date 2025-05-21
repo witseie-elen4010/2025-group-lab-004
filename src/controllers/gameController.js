@@ -310,6 +310,7 @@ exports.getWordDescription = async (req, res) => {
       playerName: player.username,
       word: player.word || 'No word assigned'
     })
+    return res.redirect(`/game_round?gameId=${gameId}`)
   } catch (error) {
     console.error('Error rendering word description:', error)
     res.redirect('/dashboard')
