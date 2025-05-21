@@ -71,14 +71,6 @@ exports.getGame_Creation = (req, res) => {
 
 // Get game start page
 exports.getStartgame = (req, res) => {
-  const gameId = req.query.gameId
-  res.render('start_page', {
-    title: 'Start Game',
-    gameId
-  })
-}
-
-exports.getStartgame = (req, res) => {
   const gameId = req.query.gameId || 'defaultGameId' // will automaticll generate one later
   const playerName = req.query.playerName || 'Guest'
 
@@ -235,7 +227,7 @@ exports.startGameRound = async (req, res) => {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Assign roles (simplified - you can make this more sophisticated)
+    // Assign roles
     const playerCount = game.players.length
 
     // Assign Mr. White and Undercover if enough players
@@ -247,7 +239,7 @@ exports.startGameRound = async (req, res) => {
       roles[undercoverIndex] = 'undercover'
 
       if (playerCount >= 5) {
-        // Assign Mr. White (ensure different from undercover)
+        // Assign Mr. White
         let mrWhiteIndex
         do {
           mrWhiteIndex = Math.floor(Math.random() * playerCount)
