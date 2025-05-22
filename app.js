@@ -2,57 +2,71 @@
 
 const express = require('express')
 const connectDB = require('./config/db')
+connectDB()
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
 const session = require('express-session')
-const app = express()
-const http = require('http');
-const socketIo = require('socket.io');
-const server = http.createServer(app);
-const io = socketIo(server);
+const http = require('http')
+const socketIo = require('socket.io')
 const sharedSession = require('express-socket.io-session')
+
+const app = express()
+const server = http.createServer(app)
+const io = socketIo(server)
 
 // Configure middlewares
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, 'public')))
-//
+
 // View engine setup
 app.engine('ejs', ejsMate)
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
 
-const cors = require('cors');
-
 const sessionMiddleware = session({
-  secret: 'your-secret-key', // Replace with a strong secret in production
+  secret: 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false} // Set `secure: true` if using HTTPS
-});
+  cookie: { secure: false }
+})
 
-// Handling app use
-app.use(sessionMiddleware);
+app.use(sessionMiddleware)
+io.use(sharedSession(sessionMiddleware, { autoSave: true }))
 
-// socket.IO setup for session cookie
+// Game state
+const players = []
+let player_turn = 0
+let wordAssignments = {}
+let currentWords = { civilian: '', undercover: '' }
 
-io.use(sharedSession(sessionMiddleware, {
-  autoSave: true
-}));
+const wordPairs = [
+  { civilian: 'Laptop', undercover: 'Computer' },
+  { civilian: 'Beach', undercover: 'Desert' },
+  { civilian: 'Pizza', undercover: 'Burger' },
+  { civilian: 'Doctor', undercover: 'Nurse' },
+  { civilian: 'Football', undercover: 'Rugby' }
+]
 
+io.on('connection', socket => {
+  const username = socket.handshake.session.username
+  console.log(`New player connected - ${username}`)
 
-// socket.io handlers
+  socket.on('joinGame', (gameId) => {
+    socket.join(gameId)
+    socket.data.gameId = gameId
+    players.push(socket.id)
+
 
 var games = {};   // {gameId: {players:{}, player_turn: 0, game_round:1}}
 
-io.on('connect', socket=>{
-  
-  const username = socket.handshake.session.username;
-  console.log(`new player connected - ${username}`);
-  
-  // New player joining handler
-  socket.on('joinGame', (gameId) => {
+
+//   socket.on('start', () => {
+//     console.log('Game starting...')
+//     player_turn = 0
+//     wordAssignments = {}
+
 
     socket.join(gameId);
     socket.data.gameId = gameId;
@@ -166,6 +180,62 @@ io.on('connect', socket=>{
 
 });
 
+//     // Pick a random word pair
+//     const wordPair = wordPairs[Math.floor(Math.random() * wordPairs.length)]
+//     currentWords = wordPair
+
+//     // Assign roles
+//     const undercoverIndex = Math.floor(Math.random() * players.length)
+
+//     players.forEach((sockid, index) => {
+//       const isUndercover = index === undercoverIndex
+//       const word = isUndercover ? wordPair.undercover : wordPair.civilian
+
+//       wordAssignments[sockid] = {
+//         role: isUndercover ? 'undercover' : 'civilian',
+//         word
+//       }
+
+//       io.to(sockid).emit('your_info', {
+//         word,
+//         round: '1',
+//         isMyTurn: index === player_turn
+//       })
+//     })
+
+//     // Let the first player take their turn
+//     io.to(players[player_turn]).emit('myTurn')
+//   })
+
+//   socket.on('description', descrip => {
+//     const gameId = socket.data.gameId
+//     const currentSocketId = players[player_turn]
+
+//     if (socket.id !== currentSocketId) {
+//       socket.emit('errorMessage', 'Not your turn!')
+//       return
+//     }
+
+//     const username = socket.handshake.session.username
+//     players.forEach(sockid => {
+//       io.to(sockid).emit('description', `Clue from ${username}: ${descrip}`)
+//     })
+
+//     player_turn++
+
+//     if (player_turn < players.length) {
+//       io.to(players[player_turn]).emit('myTurn')
+//     } else {
+//       io.to(gameId).emit('phaseChanged', {
+//         phase: 'voting',
+//         message: 'All players have submitted their clues. Voting starts now!'
+//       })                                        
+//       player_turn = 0
+//     }
+//   })
+// })
+// >>>>>>> main
+
 
 // Returns the string with high frequency
 function mostFrequentString(arr) {
@@ -189,28 +259,22 @@ function mostFrequentString(arr) {
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
 
-//Game routes
 const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/', gameRoutes)
 
-//
-// Update default route to render home page
 app.get('/', (req, res) => {
   res.render('home', { title: 'FindMrWhite' })
 })
 
-// 404 handler
-app.use(function (req, res, next) {
+app.use((req, res) => {
   res.status(404).send('Page Not Found')
 })
 
-// Error handler
-app.use(function (err, req, res, next) {
+app.use((err, req, res, next) => {
   console.error(err.stack)
   res.status(500).send('Something broke!')
 })
 
-// Server configuration
 const port = process.env.PORT || 3000
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)

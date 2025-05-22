@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Word Description</title>
+  <link rel="stylesheet" href="/css/word-description.css">
+</head>
+<body>
+  <h1>Welcome <%= playerName %></h1>
+  <h2>Your word: <span id="my-word">Waiting...</span></h2>
+
+  <div id="turnStatus"></div>
+
+  <div id="turnStatus">Waiting for host to start the game...</div>
+
+    <!-- Hidden input for later use -->
+  <input type="hidden" id="gameId" value="<%= gameId %>">
+  <input type="hidden" id="playerName" value="<%= playerName %>">
+
+  <!-- Description input, initially hidden -->
+  <div id="clueInput" style="display: none;">
+    <textarea id="description" placeholder="Enter your description..." required></textarea>
+    <button id="submitDescription">Submit</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const gameId = document.getElementById("gameId").value;
+    const playerName = document.getElementById("playerName").value;
+
+    socket.emit("joinGame", gameId);
+
+
+  // Receive your word and turn info
+    socket.on("your_info", ({ word, isMyTurn }) => {
+      document.getElementById("my-word").innerText = word;
+
+      if (isMyTurn) {
+        document.getElementById("turnStatus").innerText = "Your Turn!";
+        document.getElementById("clueInput").style.display = "block";
+      } else {
+        document.getElementById("turnStatus").innerText = "Waiting for your turn...";
+      }
+    });
+
+    // Get notified when it's your turn (future rounds)
+    socket.on("myTurn", () => {
+      document.getElementById("turnStatus").innerText = "Your Turn!";
+      document.getElementById("clueInput").style.display = "block";
+    });
+
+    // Handle clue submission
+    document.getElementById("submitDescription").addEventListener("click", () => {
+      const descrip = document.getElementById("description").value.trim();
+      if (descrip !== "") {
+        socket.emit("description", descrip);
+        document.getElementById("clueInput").style.display = "none";
+        document.getElementById("turnStatus").innerText = "Waiting for other players...";
+        document.getElementById("description").value = "";
+      }
+    });
+
+    // Handle phase change to voting
+    socket.on("phaseChange", (phase) => {
+      if (phase === "voting") {
+        alert("All players have submitted clues. Moving to voting phase.");
+        window.location.href = `/vote/${gameId}?playerName=${encodeURIComponent(playerName)}`;
+      }
+    });
+
+    // Optional: show all clues to all players
+    socket.on("description", (msg) => {
+      const p = document.createElement("p");
+      p.innerText = msg;
+      document.body.appendChild(p);
+    });
+  </script>
+</body>
+</html>
+
+
+ 
