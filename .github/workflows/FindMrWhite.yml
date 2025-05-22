@@ -70,3 +70,4 @@ jobs:
           app-name: 'findmrwhite-app'
           slot-name: 'Production'
           package: .
+          dbURI : 'mongodb+srv://group04:test12345@cluster0.dkupoft.mongodb.net/MrWHiteDb?retryWrites=true&w=majority&appName=Cluster0'
