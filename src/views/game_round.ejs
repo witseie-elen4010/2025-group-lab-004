@@ -50,8 +50,6 @@
 
           socket.emit('start');
           
-          this.remove();
-          
         });
 
       </script>
@@ -167,6 +165,8 @@
       let game_round = document.getElementById("game_status");
       game_round.innerHTML = `GAME ROUND ${data.round}`;
 
+      document.querySelector('#start_form').remove();
+
       if(data.isMyTurn){
 
         let form_clue_cont = document.getElementById("clue_cont");
@@ -242,6 +242,27 @@
           });
         });
     });
-    
-    
+
+    socket.on('eliminated', player=>{
+      if (player !== sessionStorage.getItem('username')){
+        document.querySelector(`#${player}`).remove();
+        socket.emit('removed', player);
+      }
+      else{
+        window.location.href = '/dashboard';
+      }
+         
+    });
+
+    socket.on('next_round', data=>{
+      let game_round = document.getElementById("game_status");
+      game_round.innerHTML = `GAME ROUND ${data.round}`;
+
+      document.getElementById('Clues').innerHTML = "";
+    })
+
+    socket.on('alert', msg=>{
+      alert(msg);
+    })
+       
 </script>

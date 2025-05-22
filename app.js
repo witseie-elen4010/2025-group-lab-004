@@ -44,8 +44,7 @@ io.use(sharedSession(sessionMiddleware, {
 
 // socket.io handlers
 
-var players = [];
-var player_turn = 0;
+var games = {};   // {gameId: {players:{}, player_turn: 0, game_round:1}}
 
 io.on('connect', socket=>{
   
@@ -57,55 +56,134 @@ io.on('connect', socket=>{
 
     socket.join(gameId);
     socket.data.gameId = gameId;
-    players.push(socket.id);
     console.log(socket.id)
 
-    console.log(`User joined room: ${players[0]}`);
+    // construct game
+    if (!games[gameId]){
+        games[gameId] = {};
+        games[gameId]["players"] = {};
+        games[gameId]["players"][username] = socket.id;
+        games[gameId]["player_turn"] = 0;
+        games[gameId]["game_round"] = 1;
+        games[gameId]["voted"] = [];
+        console.log("creating game");
+    } 
+    else{
+      console.log("adding new player");
+      games[gameId]["players"][username] = socket.id;
+    }
+
     socket.to(gameId).emit('message', username)
   });
 
   // Word Description handler
   socket.on('description', descrip => {
-    
+
+    const gameId = socket.data.gameId;
+    let player_turn = games[gameId]["player_turn"];
     player_turn++;
-    players.forEach((sockid, index) => {
+
+    Object.values(games[gameId]["players"]).forEach((socketid, index) => {
       
       if (index == player_turn){
-        io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
-        io.to(sockid).emit('myTurn');
+        io.to(socketid).emit('description', `Clue from ${username}: ${descrip}`);
+        io.to(socketid).emit('myTurn');
         
       }
-      else io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
+      else io.to(socketid).emit('description', `clue from ${username}: ${descrip}`);
     });
 
-    if (player_turn == players.length){
+    if (player_turn == Object.values(games[gameId]["players"]).length){
       console.log('Inside vote');
-      players.forEach((sockid, index) => {
-       io.to(sockid).emit('voteplayer');
+
+      Object.values(games[gameId]["players"]).forEach((socketid, index) => {
+       io.to(socketid).emit('voteplayer');
       });
 
     }
+    
+    games[gameId]["player_turn"] = player_turn;
+
   });
   
   // start game handler
   socket.on('start', ()=>{
-    console.log('starting the game');
-    // need an algorithm to assign words based on roles
-    // code here
-    // Sending ifomation to players  for UI update
-    players.forEach((sockid, index) => {
-      if (index == player_turn){
-        io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:true});
-      }
-      else io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:false});
-    });
+    const gameId = socket.data.gameId;
+    if(Object.values(games[gameId]["players"]).length >= 2){
+      console.log('starting the game');
+      // need an algorithm to assign words based on roles
+      // code here
+      // Sending ifomation to players  for UI update
+      
+      Object.values(games[gameId]["players"]).forEach((sockid, index) => {
+        if (index == games[gameId]["player_turn"]){
+          io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:true});
+        }
+        else io.to(sockid).emit('your_info', {word:"Laptop", round:'1', isMyTurn:false});
+      });
+    }
+    else socket.emit('alert', "players must be atleast 3");
   });
 
   socket.on('eliminate', user=>{
+    
+    const gameId = socket.data.gameId;
     console.log(`${username} voted for ${user}`);
+    games[gameId]["voted"].push(user);
+
+    if (games[gameId]["voted"].length == Object.keys(games[gameId]["players"]).length){
+      
+      const mostfre = mostFrequentString(games[gameId]["voted"]);
+      games[gameId]["player_turn"] = 0;
+      games[gameId]["game_round"] += 1;
+      games[gameId]["voted"] = [];
+      
+      Object.values(games[gameId]["players"]).forEach((socketid, index) => {
+          io.to(socketid).emit('eliminated', mostfre);
+      });
+      
+    }
   });
 
+  socket.on('removed', user=>{
+
+    const gameId = socket.data.gameId;
+    if(games[gameId]["players"][user]){
+      delete games[gameId]["players"][user];
+    }
+
+    // winning condition here
+    // code
+    
+    Object.values(games[gameId]["players"]).forEach((sockid, index) => {
+      if (index == games[gameId]["player_turn"]){
+        io.to(sockid).emit('next_round', {round:games[gameId]["game_round"]});
+        io.to(sockid).emit('myTurn');
+      }
+      else io.to(sockid).emit('next_round', {round:games[gameId]["game_round"]});
+    });
+  })
+
 });
+
+
+// Returns the string with high frequency
+function mostFrequentString(arr) {
+  const freq = {};
+  let maxCount = 0;
+  let mostCommon = null;
+
+  for (const str of arr) {
+    freq[str] = (freq[str] || 0) + 1;
+
+    if (freq[str] > maxCount) {
+      maxCount = freq[str];
+      mostCommon = str;
+    }
+  }
+
+  return mostCommon;
+}
 
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
