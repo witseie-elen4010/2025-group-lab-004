@@ -70,3 +70,5 @@ jobs:
           app-name: 'findmrwhite-app'
           slot-name: 'Production'
           package: .
+        env:
+          DATABASE_URL: ${{ secrets.DATABSE_URL}}
