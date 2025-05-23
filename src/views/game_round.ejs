@@ -154,43 +154,17 @@
       playerCont.appendChild(temp.firstElementChild);
     });
     
-     
-    socket.on('your_info', (data)=>{
-      
-      console.log(data.word);
+
+
+    // assign the user word
+    socket.on('word', word=>{
+
       let word_cont = document.getElementById("Player_word");
       word_cont.innerHTML = `<h4>Game Started</h4>
-                             <p>Your Word: <strong>${data.word}</strong></p>`;
-      
-      let game_round = document.getElementById("game_status");
-      game_round.innerHTML = `GAME ROUND ${data.round}`;
+                             <p>Your Word: <strong>${word}</strong></p>`;
 
-      document.querySelector('#start_form').remove();
-
-      if(data.isMyTurn){
-
-        let form_clue_cont = document.getElementById("clue_cont");
-        form_clue_cont.innerHTML = `<form id='form_clue'>
-                                        <h3>Your Turn</h3>
-                                        Description:
-                                        <input type='text' id='clue' required>
-                                        <button type='submit'>Submit</button>
-                                    </form>`;
-        
-        // Submit the description to other players.
-        document.getElementById("form_clue").addEventListener("submit", function(event) {
-          
-          event.preventDefault(); // Stop form from submitting normally
-          
-          let clue = document.getElementById('clue').value;
-
-          socket.emit('description', clue);
-          
-          this.remove();
-        }); 
-
-      }
-    });
+    })
+    
      
     socket.on('description', desc => {
       const temp = document.createElement('div');
