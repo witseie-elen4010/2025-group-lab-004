@@ -38,14 +38,7 @@ io.use(sharedSession(sessionMiddleware, { autoSave: true }))
 // Game state
 var games = {};   // {gameId: {players:{}, player_turn: 0, game_round:1}}
 var assignment = {};
-
-// const wordPairs = [
-//   { civilian: 'Laptop', undercover: 'Computer' },
-//   { civilian: 'Beach', undercover: 'Desert' },
-//   { civilian: 'Pizza', undercover: 'Burger' },
-//   { civilian: 'Doctor', undercover: 'Nurse' },
-//   { civilian: 'Football', undercover: 'Rugby' }
-// ]
+var eliminatedPlayers = {};
 
 const wordPairs = [
   ['Laptop', 'Computer' ],
@@ -112,6 +105,7 @@ io.on('connection', socket => {
         games[gameId]["player_turn"] = 0;
         games[gameId]["game_round"] = 1;
         games[gameId]["voted"] = [];
+        eliminatedPlayers[gameId] = [];
     } 
     else{
       games[gameId]["players"][username] = socket.id;
@@ -151,7 +145,7 @@ io.on('connection', socket => {
   // start game handler
   socket.on('start', ()=>{
     const gameId = socket.data.gameId;
-    if(Object.values(games[gameId]["players"]).length >= 3){
+    if(Object.values(games[gameId]["players"]).length >= 2){
 
       // need an algorithm to assign words based on roles
       assignment[gameId] = assignRolesAndWords(Object.keys(games[gameId]["players"]), wordPairs);
@@ -179,7 +173,7 @@ io.on('connection', socket => {
     
     const gameId = socket.data.gameId;
     games[gameId]["voted"].push(user);
-
+    console.log(games[gameId]["voted"].length);
     if (games[gameId]["voted"].length == Object.keys(games[gameId]["players"]).length){
       
       const mostfre = mostFrequentString(games[gameId]["voted"]);
@@ -198,9 +192,10 @@ io.on('connection', socket => {
 
     const gameId = socket.data.gameId;
     if(games[gameId]["players"][user]){
+      eliminatedPlayers[gameId].push(user);
       delete games[gameId]["players"][user];
     }
-
+    
     // winning condition here
     // code
     
