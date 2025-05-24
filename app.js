@@ -10,10 +10,11 @@ const session = require('express-session')
 const http = require('http')
 const socketIo = require('socket.io')
 const sharedSession = require('express-socket.io-session')
-
+const socketIO = require('socket.io')
+const cors = require('cors')
 const app = express()
 const server = http.createServer(app)
-const io = socketIo(server)
+const io = socketIO(server)
 
 // Configure middlewares
 app.use(bodyParser.json())
@@ -26,10 +27,10 @@ app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
 
 const sessionMiddleware = session({
-  secret: 'your-secret-key',
+  secret: 'your-secret-key', // Replace with a strong secret in production
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false }
+  cookie: { secure: false } // Set `secure: true` if using HTTPS
 })
 
 app.use(sessionMiddleware)
@@ -81,17 +82,14 @@ function assignRolesAndWords(players, wordPairs) {
   for (const player of shuffledPlayers) {
     assignments[player] = { role: "civilian", word: civilianWord };
   }
-
-  return assignments;
 }
 
-
-
-io.on('connection', socket => {
-
-  const username = socket.handshake.session.username
-  console.log(`New player connected - ${username}`)
-
+io.on('connect', socket=>{
+  
+  const username = socket.handshake.session.username;
+  console.log(`new player connected - ${username}`);
+  
+  // New player joining handler
   socket.on('joinGame', (gameId) => {
     socket.join(gameId)
     socket.data.gameId = gameId
@@ -110,36 +108,22 @@ io.on('connection', socket => {
     else{
       games[gameId]["players"][username] = socket.id;
     }
-
     socket.to(gameId).emit('message', username)
   });
 
   // Word Description handler
   socket.on('description', descrip => {
-
-    const gameId = socket.data.gameId;
-    let player_turn = games[gameId]["player_turn"];
+    
     player_turn++;
-
-    Object.values(games[gameId]["players"]).forEach((socketid, index) => {
+    players.forEach((sockid, index) => {
       
       if (index == player_turn){
-        io.to(socketid).emit('description', `Clue from ${username}: ${descrip}`);
-        io.to(socketid).emit('myTurn');
+        io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
+        io.to(sockid).emit('myTurn');
         
       }
-      else io.to(socketid).emit('description', `clue from ${username}: ${descrip}`);
+      else io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
     });
-
-    if (player_turn == Object.values(games[gameId]["players"]).length){
-      Object.values(games[gameId]["players"]).forEach((socketid, index) => {
-       io.to(socketid).emit('voteplayer');
-      });
-
-    }
-    
-    games[gameId]["player_turn"] = player_turn;
-
   });
   
   // start game handler
@@ -204,35 +188,17 @@ io.on('connection', socket => {
         io.to(sockid).emit('next_round', {round:games[gameId]["game_round"]});
         io.to(sockid).emit('myTurn');
       }
-      else io.to(sockid).emit('next_round', {round:games[gameId]["game_round"]});
+      else io.to(sockid).emit('next_round', {round:games[gameId]["game_round"]});;
     });
-  })
-
+  });
 });
 
-
-// Returns the string with high frequency
-function mostFrequentString(arr) {
-  const freq = {};
-  let maxCount = 0;
-  let mostCommon = null;
-
-  for (const str of arr) {
-    freq[str] = (freq[str] || 0) + 1;
-
-    if (freq[str] > maxCount) {
-      maxCount = freq[str];
-      mostCommon = str;
-    }
-  }
-
-  return mostCommon;
-}
 
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
 
+// Game routes
 const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/', gameRoutes)
 
@@ -249,9 +215,15 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something broke!')
 })
 
+// Server configuration
 const port = process.env.PORT || 3000
+require('./config/db')()
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
 })
+
+app.set('io', io)
+
+const userSockets = new Map()
 
 module.exports = app

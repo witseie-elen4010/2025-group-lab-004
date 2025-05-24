@@ -1,0 +1,102 @@
+/* Invitation Form */
+.invite-form {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: #f8f9fa; /* same as your jumbotron bg */
+  padding: 1rem;
+  border-radius: 0.3rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* like your card shadow */
+}
+
+.invite-form label {
+  font-weight: bold;
+  min-width: 160px;
+}
+
+.invite-form input[type="text"] {
+  flex-grow: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 0.3rem;
+  font-size: 1rem;
+}
+
+.invite-form button {
+  background-color: #007bff; /* Bootstrap blue for consistency */
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.invite-form button:hover {
+  background-color: #0056b3;
+}
+
+/* Invitations List */
+.invitations-list {
+  background: #f8f9fa;
+  border-radius: 0.3rem;
+  padding: 1rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  max-width: 600px;
+  margin: 0 auto 2rem;
+}
+
+.invitations-list h2 {
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.invitations-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.invitation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #dee2e6;
+  font-family: Arial, sans-serif;
+}
+
+.invitation-item:last-child {
+  border-bottom: none;
+}
+
+.invitation-info {
+  flex: 1;
+  font-weight: 500;
+}
+
+.inline-form {
+  margin-left: 0.5rem;
+}
+
+.inline-form button {
+  background-color: #28a745; /* Accept: green */
+  color: white;
+  border: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  margin-left: 0.25rem;
+}
+
+.inline-form button.btn-decline {
+  background-color: #dc3545; /* Decline: red */
+}
+
+.inline-form button:hover {
+  filter: brightness(90%);
+}
