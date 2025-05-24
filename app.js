@@ -8,10 +8,10 @@ const path = require('path')
 const ejsMate = require('ejs-mate')
 const session = require('express-session')
 const http = require('http')
-const socketIo = require('socket.io')
-const sharedSession = require('express-socket.io-session')
 const socketIO = require('socket.io')
-const cors = require('cors')
+const sharedSession = require('express-socket.io-session')
+
+
 const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
@@ -82,6 +82,8 @@ function assignRolesAndWords(players, wordPairs) {
   for (const player of shuffledPlayers) {
     assignments[player] = { role: "civilian", word: civilianWord };
   }
+
+  return assignments;
 }
 
 io.on('connect', socket=>{
@@ -113,17 +115,30 @@ io.on('connect', socket=>{
 
   // Word Description handler
   socket.on('description', descrip => {
-    
+
+    const gameId = socket.data.gameId;
+    let player_turn = games[gameId]["player_turn"];
     player_turn++;
-    players.forEach((sockid, index) => {
+
+    Object.values(games[gameId]["players"]).forEach((socketid, index) => {
       
       if (index == player_turn){
-        io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
-        io.to(sockid).emit('myTurn');
+        io.to(socketid).emit('description', `Clue from ${username}: ${descrip}`);
+        io.to(socketid).emit('myTurn');
         
       }
-      else io.to(sockid).emit('description', `clue from ${username}: ${descrip}`);
+      else io.to(socketid).emit('description', `clue from ${username}: ${descrip}`);
     });
+
+    if (player_turn == Object.values(games[gameId]["players"]).length){
+      Object.values(games[gameId]["players"]).forEach((socketid, index) => {
+       io.to(socketid).emit('voteplayer');
+      });
+
+    }
+    
+    games[gameId]["player_turn"] = player_turn;
+
   });
   
   // start game handler
@@ -192,6 +207,23 @@ io.on('connect', socket=>{
     });
   });
 });
+
+function mostFrequentString(arr) {
+  const freq = {};
+  let maxCount = 0;
+  let mostCommon = null;
+
+  for (const str of arr) {
+    freq[str] = (freq[str] || 0) + 1;
+
+    if (freq[str] > maxCount) {
+      maxCount = freq[str];
+      mostCommon = str;
+    }
+  }
+
+  return mostCommon;
+}
 
 
 // Routes
