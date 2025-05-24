@@ -1,0 +1,71 @@
+<% layout('home_layout.ejs') %>
+<link rel="stylesheet" href="/css/dashboard.css">
+
+<h3 class="heading">Invite a Friend</h3>
+<% if (error) { %>
+  <div class="alert alert-danger"><%= error %></div>
+<% } %>
+<form action="/invite" method="POST" class="invite-form">
+  <div class="mb-3">
+    <label for="toUserId" class="form-label">Send to (Username or Email):</label>
+    <input type="text" class="form-control" id="toUserId" name="toUserId" placeholder="Enter username or email" required>
+  </div>
+  <div class="mb-3">
+    <label for="gameId" class="form-label">Game ID:</label>
+    <input type="text" class="form-control" id="gameId" name="gameId" placeholder="Enter game ID" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Send Invite</button>
+</form>
+
+<hr>
+
+<h3 class="heading">Invitations Received</h3>
+<% if (invites && invites.length > 0) { %>
+  <ul class="invite-list">
+    <% invites.forEach(invite => { %>
+      <li>
+        From: <strong><%= invite.fromUser %></strong>, Game ID: <%= invite.gameId %>
+        <% if (invite.status === 'pending') { %>
+          <form action="/invite/accept/<%= invite._id %>" method="POST" class="inline-form">
+            <button type="submit" class="btn btn-success btn-sm">Accept</button>
+          </form>
+          <form action="/invite/decline/<%= invite._id %>" method="POST" class="inline-form">
+            <button type="submit" class="btn btn-danger btn-sm">Decline</button>
+          </form>
+        <% } %>
+      </li>
+    <% }); %>
+  </ul>
+<% } else { %>
+  <p class="center-text">No invites received.</p>
+<% } %>
+
+<hr>
+
+<h3 class="heading">Sent Invites</h3>
+<% if (sentInvites && sentInvites.length > 0) { %>
+  <ul class="invite-list">
+    <% sentInvites.forEach(invite => { %>
+      <li>
+        To: <strong><%= invite.toUser %></strong>, Game ID: <%= invite.gameId %>, Status: <%= invite.status %>
+        <% if (invite.status === 'pending') { %>
+          <form action="/invite/revoke/<%= invite._id %>" method="POST" class="inline-form">
+            <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
+          </form>
+        <% } %>
+      </li>
+    <% }); %>
+  </ul>
+<% } else { %>
+  <p class="center-text">No invites sent.</p>
+<% } %>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  socket.emit('join', '<%= user._id %>');
+  socket.on('newInvite', ({ fromUser, gameId }) => {
+    alert(`New invite from ${fromUser} for game ${gameId}`);
+    window.location.reload();
+  });
+</script>
