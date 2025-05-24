@@ -35,6 +35,11 @@
         </div>
       <% }) %>
     </div>
+    <script>
+      const container = document.getElementById(`${sessionStorage.getItem('username')}`);
+      const form = container.querySelector(".Elimi-form");
+      if (form) form.remove();
+    </script>
     
     <% if (isHost) { %>
       <div class="alert alert-secondary mt-4 text-center" id="clue_cont">
@@ -152,6 +157,17 @@
 
       // Append the first child of the temporary container
       playerCont.appendChild(temp.firstElementChild);
+
+      document.querySelector(`#${msg} .player-card .Elimi-form`).addEventListener("submit", function(event) {
+          event.preventDefault();
+
+          const formData = new FormData(this);
+          socket.emit("eliminate", formData.get("votedForId"));
+
+          document.querySelectorAll(".vote-btn").forEach(button => {
+            button.disabled = true;
+          });
+      });
     });
     
 
@@ -203,18 +219,19 @@
           button.style.backgroundColor = 'green';
         });
 
-        document.querySelectorAll(".Elimi-form").forEach(form => {
-          form.addEventListener("submit", function(event) {
-            event.preventDefault();
+    });
 
-            const formData = new FormData(this);
-            socket.emit("eliminate", formData.get("votedForId"));
+    document.querySelectorAll(".Elimi-form").forEach(form => {
+      form.addEventListener("submit", function(event) {
+        event.preventDefault();
 
-            document.querySelectorAll(".vote-btn").forEach(button => {
-              button.disabled = true;
-            });
-          });
+        const formData = new FormData(this);
+        socket.emit("eliminate", formData.get("votedForId"));
+
+        document.querySelectorAll(".vote-btn").forEach(button => {
+          button.disabled = true;
         });
+      });
     });
 
     socket.on('eliminated', player=>{
