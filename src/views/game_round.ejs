@@ -20,12 +20,17 @@
     <h3>Players in Lobby</h3>
     <div class="row">
       <% gameData.players.forEach(player => { %>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-3" id="<%= player.username %>">
           <div class="player-card">
             <h4><%= player.username %></h4>
             <% if (player.userId.toString() === gameData.players[0].userId.toString()) { %>
               <span class="badge badge-primary">Host</span>
             <% } %>
+            <form class="Elimi-form">
+              <input type="hidden" name="votedForId" value="<%= player.username %>">
+              <button type="submit" class="vote-btn btn btn-danger btn-block" disabled>Vote to Eliminate</button>
+            </form>
+            
           </div>
         </div>
       <% }) %>
@@ -45,9 +50,6 @@
 
           socket.emit('start');
           
-          this.remove();
-          // const btn = document.getElementById("start_btn");
-          // btn.remove();
         });
 
       </script>
@@ -72,31 +74,6 @@
         </div>
       <% } %>
     <% } %>
-
-    <div class="players-container mb-5">
-      <h3>Active Players</h3>
-      <div class="row">
-        <% gameData.players.filter(p => !p.isEliminated).forEach(player => { %>
-          <div class="col-md-4 mb-3">
-            <div class="player-card">
-              <h4><%= player.username %></h4>
-              <% if (player.description) { %>
-                <p>Description: <%= player.description %></p>
-              <% } %>
-              <% if (!playerHasVoted && player.userId.toString() !== userId && !player.isEliminated) { %>
-                <form action="/vote" method="POST">
-                  <input type="hidden" name="gameId" value="<%= gameData._id %>">
-                  <input type="hidden" name="votedForId" value="<%= player.userId %>">
-                  <button type="submit" class="vote-btn btn btn-danger btn-block">Vote to Eliminate</button>
-                </form>
-              <% } else if (playerHasVoted && player.userId.toString() !== userId) { %>
-                <button class="vote-btn btn btn-secondary btn-block" disabled>Already Voted</button>
-              <% } %>
-            </div>
-          </div>
-        <% }) %>
-      </div>
-    </div> 
 
     <% if (gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
       <div class="eliminated-container mb-4">
@@ -163,51 +140,31 @@
 
     socket.on('message', msg=>{
       const temp = document.createElement('div');
-      temp.innerHTML = `<div class="col-md-4 mb-3">
+      temp.innerHTML = `<div class="col-md-4 mb-3" id=${msg}>
                           <div class="player-card">
                             <h4>${msg}</h4>
+                            <form class="Elimi-form">
+                              <input type="hidden" name="votedForId" value=${msg}>
+                              <button type="submit" class="vote-btn btn btn-danger btn-block" disabled>Vote to Eliminate</button>
+                            </form>
                           </div>
                         </div>`;
-      
+
       // Append the first child of the temporary container
       playerCont.appendChild(temp.firstElementChild);
     });
     
-     
-    socket.on('your_info', (data)=>{
-      
-      console.log(data.word);
+
+
+    // assign the user word
+    socket.on('word', word=>{
+
       let word_cont = document.getElementById("Player_word");
       word_cont.innerHTML = `<h4>Game Started</h4>
-                             <p>Your Word: <strong>${data.word}</strong></p>`;
-      
-      let game_round = document.getElementById("game_status");
-      game_round.innerHTML = `GAME ROUND ${data.round}`;
+                             <p>Your Word: <strong>${word}</strong></p>`;
 
-      if(data.isMyTurn){
-
-        let form_clue_cont = document.getElementById("clue_cont");
-        form_clue_cont.innerHTML = `<form id='form_clue'>
-                                        <h3>Your Turn</h3>
-                                        Description:
-                                        <input type='text' id='clue' required>
-                                        <button type='submit'>Submit</button>
-                                    </form>`;
-        
-        // Submit the description to other players.
-        document.getElementById("form_clue").addEventListener("submit", function(event) {
-          
-          event.preventDefault(); // Stop form from submitting normally
-          
-          let clue = document.getElementById('clue').value;
-
-          socket.emit('description', clue)
-          
-          this.remove();
-        }); 
-
-      }
-    });
+    })
+    
      
     socket.on('description', desc => {
       const temp = document.createElement('div');
@@ -219,6 +176,7 @@
     socket.on('myTurn', ()=>{
       let form_clue_cont = document.getElementById("clue_cont");
       form_clue_cont.innerHTML = `<form id='form_clue'>
+                                      <h3>Your Turn</h3>
                                       Description:
                                       <input type='text' id='clue' required>
                                       <button type='submit'>Submit</button>
@@ -231,18 +189,54 @@
           
           let clue = document.getElementById('clue').value;
 
-          socket.emit('description', clue)
+          socket.emit('description', clue);
           
           this.remove();
         }); 
 
     });
      
-    
-    
-    
-    // socket.on('', ()=>{
 
-    // })
-    
+    socket.on('voteplayer', () => {
+      document.querySelectorAll('.vote-btn').forEach(button => {
+          button.disabled = false;
+          button.style.backgroundColor = 'green';
+        });
+
+        document.querySelectorAll(".Elimi-form").forEach(form => {
+          form.addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            socket.emit("eliminate", formData.get("votedForId"));
+
+            document.querySelectorAll(".vote-btn").forEach(button => {
+              button.disabled = true;
+            });
+          });
+        });
+    });
+
+    socket.on('eliminated', player=>{
+      if (player !== sessionStorage.getItem('username')){
+        document.querySelector(`#${player}`).remove();
+        socket.emit('removed', player);
+      }
+      else{
+        window.location.href = '/dashboard';
+      }
+         
+    });
+
+    socket.on('next_round', data=>{
+      let game_round = document.getElementById("game_status");
+      game_round.innerHTML = `GAME ROUND ${data.round}`;
+
+      document.getElementById('Clues').innerHTML = "";
+    })
+
+    socket.on('alert', msg=>{
+      alert(msg);
+    })
+       
 </script>

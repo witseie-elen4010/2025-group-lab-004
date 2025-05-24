@@ -71,14 +71,6 @@ exports.getGame_Creation = (req, res) => {
 
 // Get game start page
 exports.getStartgame = (req, res) => {
-  const gameId = req.query.gameId
-  res.render('start_page', {
-    title: 'Start Game',
-    gameId
-  })
-}
-
-exports.getStartgame = (req, res) => {
   const gameId = req.query.gameId || 'defaultGameId' // will automaticll generate one later
   const playerName = req.query.playerName || 'Guest'
 
@@ -235,7 +227,7 @@ exports.startGameRound = async (req, res) => {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Assign roles (simplified - you can make this more sophisticated)
+    // Assign roles
     const playerCount = game.players.length
 
     // Assign Mr. White and Undercover if enough players
@@ -247,7 +239,7 @@ exports.startGameRound = async (req, res) => {
       roles[undercoverIndex] = 'undercover'
 
       if (playerCount >= 5) {
-        // Assign Mr. White (ensure different from undercover)
+        // Assign Mr. White
         let mrWhiteIndex
         do {
           mrWhiteIndex = Math.floor(Math.random() * playerCount)
@@ -293,10 +285,77 @@ exports.startGameRound = async (req, res) => {
 
     logAction(`Game ${game.code} started`, req.session.username)
 
-    res.redirect(`/game_round?gameId=${gameId}`)
+    res.redirect(`/word_description?gameId=${gameId}&playerName=${req.session.username}`)
   } catch (error) {
     console.error('Error starting game:', error)
     res.redirect('/dashboard')
+  }
+}
+// Handle word description
+exports.getWordDescription = async (req, res) => {
+  try {
+    const { gameId } = req.query
+    const userId = req.session.userId
+
+    if (!userId) return res.redirect('/login')
+
+    const game = await Game.findById(gameId)
+    if (!game) return res.status(404).send('Game not found')
+
+    const player = game.players.find(p => p.userId.toString() === userId)
+    if (!player) return res.status(404).send('Player not found in game')
+
+    res.render('word_description', {
+      gameId,
+      playerName: player.username,
+      word: player.word || 'No word assigned'
+    })
+  } catch (error) {
+    console.error('Error rendering word description:', error)
+    res.redirect('/dashboard')
+  }
+}
+
+// Post description
+// Handle word description submission
+exports.postWordDescription = async (req, res) => {
+  try {
+    const { gameId, description } = req.body
+    const userId = req.session.userId
+
+    if (!userId) return res.redirect('/login')
+
+    const game = await Game.findById(gameId)
+    if (!game) return res.redirect('/dashboard')
+
+    // Find player
+    const player = game.players.find(p => p.userId.toString() === userId)
+    if (!player || player.isEliminated) return res.redirect('/dashboard')
+
+    // Save the description
+    player.description = description
+
+    // Save the updated game
+    await game.save()
+
+    // Check if all active (non-eliminated) players submitted a description
+    const allDescribed = game.players
+      .filter(p => !p.isEliminated)
+      .every(p => p.description)
+
+    if (allDescribed) {
+      await Game.setGamePhase(gameId, 'voting')
+      io.to(gameId).emit('phaseChanged', {
+        phase: 'voting',
+        message: 'All players have submitted their descriptions. Voting phase begins now!'
+      })
+      return res.redirect(`/game_round?gameId=${gameId}`)
+    } else {
+      return res.redirect(`/word_description?gameId=${gameId}`)
+    }
+  } catch (error) {
+    console.error('Error submitting description:', error)
+    return res.redirect('/dashboard')
   }
 }
 
