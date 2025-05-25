@@ -118,7 +118,6 @@ function assignRolesAndWords (players, wordPairs) {
 
   return assignments
 }
-const { assignRolesAndWords, getRandomWordPair } = require('./src/role_word/roleWord');
 
 
 io.on('connect', socket => {
