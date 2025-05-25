@@ -3,6 +3,8 @@
 const express = require('express')
 const connectDB = require('./config/db')
 connectDB()
+const Game = require('./src/models/Game')
+const User = require('./src/models/user')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
@@ -139,9 +141,8 @@ io.on('connect', socket => {
       games[gameId].game_round = 1
       games[gameId].voted = []
       eliminatedPlayers[gameId] = []
-    } else {
-      games[gameId].players[username] = socket.id
-    }
+    } else games[gameId].players[username] = socket.id
+
     socket.to(gameId).emit('message', username)
   })
 
@@ -190,18 +191,37 @@ io.on('connect', socket => {
   })
 
   socket.on('eliminate', user => {
+
     const gameId = socket.data.gameId
     games[gameId].voted.push(user)
-    console.log(games[gameId].voted.length)
+
     if (games[gameId].voted.length === Object.keys(games[gameId].players).length) {
       const mostfre = mostFrequentString(games[gameId].voted)
-      games[gameId].player_turn = 0
-      games[gameId].game_round += 1
-      games[gameId].voted = []
+      if (mostfre.length == 1){
+        games[gameId].player_turn = 0
+        games[gameId].game_round += 1
+        games[gameId].voted = []
 
-      Object.values(games[gameId].players).forEach((socketid, index) => {
-        io.to(socketid).emit('eliminated', mostfre)
-      })
+        Object.values(games[gameId].players).forEach((socketid, index) => {
+          io.to(socketid).emit('eliminated', mostfre)
+        })
+      }
+      else{
+
+        // repeat round
+        games[gameId].player_turn = 0;
+        games[gameId].voted = [];
+        Object.keys(games[gameId].players).forEach((user, index) => {
+          if (index == games[gameId].player_turn) {
+            io.to(games[gameId].players[user]).emit('myTurn')
+            io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
+            
+          } else {
+            io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
+          }
+        })
+
+      }
     }
   })
 
@@ -249,21 +269,20 @@ io.on('connect', socket => {
   })
 })
 
-function mostFrequentString (arr) {
-  const freq = {}
-  let maxCount = 0
-  let mostCommon = null
+function mostFrequentString(arr) {
+  const freq = {};
+  let maxCount = 0;
 
   for (const str of arr) {
-    freq[str] = (freq[str] || 0) + 1
-
+    freq[str] = (freq[str] || 0) + 1;
     if (freq[str] > maxCount) {
-      maxCount = freq[str]
-      mostCommon = str
+      maxCount = freq[str];
     }
   }
 
-  return mostCommon
+  const mostCommon = Object.keys(freq).filter(str => freq[str] === maxCount);
+
+  return mostCommon;
 }
 
 function checkWinCondition (gameId) {

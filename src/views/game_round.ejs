@@ -274,6 +274,13 @@
       document.getElementById('Clues').innerHTML = "";
     })
 
+    socket.on('repeat_round', ()=>{
+      document.getElementById('Clues').innerHTML = "";
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = `No one was eliminated due to equal number of votes, the round repeats`;
+      statusDiv.style.display = 'block';
+    })
+
     socket.on('alert', msg=>{
       alert(msg);
     })
