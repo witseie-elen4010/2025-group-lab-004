@@ -51,40 +51,8 @@ const wordPairs = [
 
 // // Role and word assignment algorithms
 
-function getRandomWordPair (pairs) {
-  const randomIndex = Math.floor(Math.random() * pairs.length)
-  return pairs[randomIndex]
-}
+const { assignRolesAndWords, getRandomWordPair } = require('./src/role_word/roleWord');
 
-function assignRolesAndWords (players, wordPairs) {
-  const shuffledPlayers = [...players].sort(() => Math.random() - 0.5)
-  const assignments = {}
-
-  const [civilianWord, undercoverWord] = getRandomWordPair(wordPairs)
-
-  const numPlayers = players.length
-
-  // Step 1: Assign Mr. White
-  const mrWhitePlayer = shuffledPlayers.pop()
-  assignments[mrWhitePlayer] = { role: 'mr white', word: 'you are Mr white (no word assigned for you)' }
-
-  // Step 2: Split remaining evenly
-  const remaining = shuffledPlayers.length
-  const half = Math.floor(remaining / 2)
-
-  // Step 3: Assign Undercover
-  for (let i = 0; i < half; i++) {
-    const undercoverPlayer = shuffledPlayers.pop()
-    assignments[undercoverPlayer] = { role: 'undercover', word: undercoverWord }
-  }
-
-  // Step 4: Assign Civilians
-  for (const player of shuffledPlayers) {
-    assignments[player] = { role: 'civilian', word: civilianWord }
-  }
-
-  return assignments;
-}
 
 io.on('connect', socket => {
   const username = socket.handshake.session.username
@@ -237,7 +205,7 @@ app.use((err, req, res, next) => {
 })
 
 // Server configuration
-const port = process.env.PORT || 5000
+const port = process.env.PORT || 3000
 require('./config/db')()
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
