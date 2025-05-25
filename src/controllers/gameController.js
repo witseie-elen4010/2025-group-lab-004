@@ -6,7 +6,6 @@ const User = require('../models/user')
 // Admin logging function
 const logAction = (action, username) => {
   console.log(`[${new Date().toISOString()}] ${action} by ${username}`)
-  // In a real application, you would store this in a database
 }
 
 // Handle for creating a game session
@@ -27,26 +26,23 @@ exports.postGame_Creation = async (req, res) => {
       })
     }
 
-    // Get user details
     const user = await User.findById(userId)
     if (!user) {
       return res.redirect('/login')
     }
 
-    // Create new game
     const game = new Game({
       code,
       players: [{
         userId,
         username: user.username,
-        role: 'civilian', // Default role until game starts
+        role: 'civilian',
         isEliminated: false
       }],
       status: 'waiting'
     })
 
     await game.save()
-
     logAction(`Game ${code} created`, user.username)
 
     res.redirect(`/game_round?gameId=${game._id}`)
@@ -59,19 +55,54 @@ exports.postGame_Creation = async (req, res) => {
   }
 }
 
-// display dashboard
-exports.getDashboard = (req, res) => {
-  res.render('dashboard', { title: 'Dashboard' })
+// Display dashboard
+exports.getDashboard = async (req, res) => {
+  try {
+    const userId = req.session.userId
+    if (!userId) {
+      return res.redirect('/login')
+    }
+
+    const user = await User.findById(userId)
+    if (!user) {
+      return res.redirect('/login')
+    }
+
+    // Ensure stats structure exists
+    if (!user.stats) {
+      user.stats = {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        winningRate: 0
+      }
+      await user.save()
+    }
+
+    res.render('dashboard', {
+      title: 'Dashboard',
+      username: user.username,
+      stats: {
+        gamesPlayed: user.stats.gamesPlayed,
+        gamesWon: user.stats.gamesWon,
+        gamesLost: user.stats.gamesLost,
+        winningRate: user.stats.winningRate.toFixed(2)
+      }
+    })
+  } catch (error) {
+    console.error('Error loading dashboard:', error)
+    res.status(500).send('Something broke!')
+  }
 }
 
-// display Game create page
+// Display Game create page
 exports.getGame_Creation = (req, res) => {
   res.render('game_creation', { title: 'Create Game', Error: null })
 }
 
 // Get game start page
 exports.getStartgame = (req, res) => {
-  const gameId = req.query.gameId || 'defaultGameId' // will automaticll generate one later
+  const gameId = req.query.gameId || 'defaultGameId'
   const playerName = req.query.playerName || 'Guest'
 
   res.render('start_page', {
@@ -80,6 +111,7 @@ exports.getStartgame = (req, res) => {
     playerName
   })
 }
+
 // Handle joining a game
 exports.createJoinGame = async (req, res) => {
   try {
@@ -106,29 +138,25 @@ exports.createJoinGame = async (req, res) => {
       })
     }
 
-    // Check if player is already in the game
     const playerExists = game.players.some(p => p.userId.toString() === userId)
 
     if (playerExists) {
       return res.redirect(`/game_round?gameId=${game._id}`)
     }
 
-    // Get user details
     const user = await User.findById(userId)
     if (!user) {
       return res.redirect('/login')
     }
 
-    // Add player to game
     game.players.push({
       userId,
       username: user.username,
-      role: 'civilian', // Default role until game starts
+      role: 'civilian',
       isEliminated: false
     })
 
     await game.save()
-
     logAction(`User ${user.username} joined game ${code}`, user.username)
 
     res.redirect(`/game_round?gameId=${game._id}`)
@@ -160,12 +188,10 @@ exports.getGameRound = async (req, res) => {
       return res.redirect('/dashboard')
     }
 
-    // Redirect to results if game is over
     if (game.status === 'completed') {
       return res.redirect(`/game_results?gameId=${gameId}`)
     }
 
-    // Check if user is in this game
     const playerIndex = game.players.findIndex(p =>
       p.userId.toString() === userId
     )
@@ -174,18 +200,15 @@ exports.getGameRound = async (req, res) => {
       return res.redirect('/dashboard')
     }
 
-    // Check if player has already voted in this round
     const playerHasVoted = game.votes.some(vote =>
       vote.round === game.currentRound &&
       vote.voterId.toString() === userId
     )
 
-    // Check if all active players have voted
     const activePlayers = game.players.filter(p => !p.isEliminated)
     const votesThisRound = game.votes.filter(v => v.round === game.currentRound)
     const allPlayersVoted = votesThisRound.length === activePlayers.length
 
-    // Determine if user is the host (first player)
     const isHost = game.players[0].userId.toString() === userId
 
     res.render('game_round', {
@@ -217,29 +240,22 @@ exports.startGameRound = async (req, res) => {
       return res.redirect('/dashboard')
     }
 
-    // Check if user is the host
     if (game.players[0].userId.toString() !== userId) {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Only start the game if it's in waiting state
     if (game.status !== 'waiting') {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Assign roles
     const playerCount = game.players.length
-
-    // Assign Mr. White and Undercover if enough players
     const roles = Array(playerCount).fill('civilian')
 
     if (playerCount >= 4) {
-      // Assign one undercover
       const undercoverIndex = Math.floor(Math.random() * playerCount)
       roles[undercoverIndex] = 'undercover'
 
       if (playerCount >= 5) {
-        // Assign Mr. White
         let mrWhiteIndex
         do {
           mrWhiteIndex = Math.floor(Math.random() * playerCount)
@@ -249,7 +265,6 @@ exports.startGameRound = async (req, res) => {
       }
     }
 
-    // Sample word pairs
     const wordPairs = [
       { civilian: 'Beach', undercover: 'Shore' },
       { civilian: 'Pizza', undercover: 'Pasta' },
@@ -258,10 +273,8 @@ exports.startGameRound = async (req, res) => {
       { civilian: 'Coffee', undercover: 'Tea' }
     ]
 
-    // Select a random word pair
     const wordPair = wordPairs[Math.floor(Math.random() * wordPairs.length)]
 
-    // Assign roles and words to players
     for (let i = 0; i < game.players.length; i++) {
       const player = game.players[i]
       player.role = roles[i]
@@ -271,26 +284,25 @@ exports.startGameRound = async (req, res) => {
       } else if (player.role === 'undercover') {
         player.word = wordPair.undercover
       } else {
-        player.word = 'unknown' // Mr. White gets no word
+        player.word = 'unknown'
       }
     }
 
-    // Update game status
     game.status = 'in-progress'
     game.currentRound = 1
     game.civilianWord = wordPair.civilian
     game.undercoverWord = wordPair.undercover
 
     await game.save()
-
     logAction(`Game ${game.code} started`, req.session.username)
 
-    res.redirect(`/word_description?gameId=${gameId}&playerName=${req.session.username}`)
+    res.redirect(`/game_round?gameId=${gameId}`)
   } catch (error) {
     console.error('Error starting game:', error)
     res.redirect('/dashboard')
   }
 }
+
 // Handle word description
 exports.getWordDescription = async (req, res) => {
   try {
@@ -316,7 +328,6 @@ exports.getWordDescription = async (req, res) => {
   }
 }
 
-// Post description
 // Handle word description submission
 exports.postWordDescription = async (req, res) => {
   try {
@@ -328,23 +339,19 @@ exports.postWordDescription = async (req, res) => {
     const game = await Game.findById(gameId)
     if (!game) return res.redirect('/dashboard')
 
-    // Find player
     const player = game.players.find(p => p.userId.toString() === userId)
     if (!player || player.isEliminated) return res.redirect('/dashboard')
 
-    // Save the description
     player.description = description
-
-    // Save the updated game
     await game.save()
 
-    // Check if all active (non-eliminated) players submitted a description
     const allDescribed = game.players
       .filter(p => !p.isEliminated)
       .every(p => p.description)
 
     if (allDescribed) {
       await Game.setGamePhase(gameId, 'voting')
+      const io = req.app.get('io')
       io.to(gameId).emit('phaseChanged', {
         phase: 'voting',
         message: 'All players have submitted their descriptions. Voting phase begins now!'
@@ -374,7 +381,6 @@ exports.postVote = async (req, res) => {
       return res.redirect('/dashboard')
     }
 
-    // Check if voter is in this game and not eliminated
     const voter = game.players.find(p =>
       p.userId.toString() === voterId && !p.isEliminated
     )
@@ -383,7 +389,6 @@ exports.postVote = async (req, res) => {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Check if voted player is in this game and not eliminated
     const votedPlayer = game.players.find(p =>
       p.userId.toString() === votedForId && !p.isEliminated
     )
@@ -392,7 +397,6 @@ exports.postVote = async (req, res) => {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Check if player already voted in this round
     const existingVote = game.votes.find(v =>
       v.round === game.currentRound && v.voterId.toString() === voterId
     )
@@ -401,7 +405,6 @@ exports.postVote = async (req, res) => {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Add the vote
     game.votes.push({
       round: game.currentRound,
       voterId,
@@ -409,7 +412,6 @@ exports.postVote = async (req, res) => {
     })
 
     await game.save()
-
     logAction(`Player voted in game ${game.code}`, req.session.username)
 
     res.redirect(`/game_round?gameId=${gameId}`)
@@ -434,22 +436,22 @@ exports.endVoting = async (req, res) => {
       return res.redirect('/dashboard')
     }
 
-    // Check if user is the host
-    if (game.players[0].userId.toString() !== userId) {
+    // Allow any active (non-eliminated) player to end voting, not just host
+    const activePlayer = game.players.find(p => 
+      p.userId.toString() === userId && !p.isEliminated
+    )
+    
+    if (!activePlayer) {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Count votes for current round
     const votesThisRound = game.votes.filter(v => v.round === game.currentRound)
-
-    // Group votes by votedForId
     const voteCount = {}
     votesThisRound.forEach(vote => {
       const id = vote.votedForId.toString()
       voteCount[id] = (voteCount[id] || 0) + 1
     })
 
-    // Find player with most votes
     let maxVotes = 0
     let eliminatedPlayerId = null
 
@@ -461,19 +463,15 @@ exports.endVoting = async (req, res) => {
     }
 
     if (eliminatedPlayerId) {
-      // Find the player to eliminate
       const playerIndex = game.players.findIndex(
         p => p.userId.toString() === eliminatedPlayerId
       )
 
       if (playerIndex !== -1) {
         const eliminatedPlayer = game.players[playerIndex]
-
-        // Mark player as eliminated
         eliminatedPlayer.isEliminated = true
         eliminatedPlayer.eliminatedInRound = game.currentRound
 
-        // Add to eliminated players list
         game.eliminatedPlayers = game.eliminatedPlayers || []
         game.eliminatedPlayers.push({
           userId: eliminatedPlayer.userId,
@@ -482,7 +480,7 @@ exports.endVoting = async (req, res) => {
           round: game.currentRound
         })
 
-        // Check if game is over
+        // Check win conditions with original logic
         const remainingCivilians = game.players.filter(
           p => !p.isEliminated && p.role === 'civilian'
         ).length
@@ -492,10 +490,8 @@ exports.endVoting = async (req, res) => {
         ).length
 
         if (remainingCivilians <= 1 || remainingImposters === 0) {
-          // Game is over
           game.status = 'completed'
         } else {
-          // Move to next round
           game.currentRound += 1
         }
 
@@ -504,7 +500,6 @@ exports.endVoting = async (req, res) => {
     }
 
     await game.save()
-
     res.redirect(`/game_round?gameId=${gameId}`)
   } catch (error) {
     console.error('Error ending voting:', error)
@@ -540,7 +535,6 @@ exports.getGameResults = async (req, res) => {
       return res.redirect('/dashboard')
     }
 
-    // Determine winners
     const remainingCivilians = game.players.filter(
       p => !p.isEliminated && p.role === 'civilian'
     )
@@ -557,23 +551,18 @@ exports.getGameResults = async (req, res) => {
       winners = game.players.filter(p => p.role === 'civilian')
     }
 
-    // Update player stats
+    // Update player stats using the new method
     for (const player of game.players) {
-      const user = await User.findById(player.userId)
-      if (user) {
-        user.stats.gamesPlayed += 1
-        const isWinner = winners.some(w => w.userId.toString() === player.userId.toString())
-        if (isWinner) {
-          user.stats.gamesWon += 1
-        } else {
-          user.stats.gamesLost += 1
+      try {
+        const user = await User.findById(player.userId)
+        if (user) {
+          const isWinner = winners.some(w => w.userId.toString() === player.userId.toString())
+          const wasSurvivor = !player.isEliminated
+          user.updateGameStats(player.role, isWinner, wasSurvivor)
+          await user.save()
         }
-        user.stats.winningRate = user.stats.gamesPlayed > 0
-          ? (user.stats.gamesWon / user.stats.gamesPlayed) * 100
-          : 0
-        // Update role distribution
-        user.stats.roleDistribution[player.role] += 1
-        await user.save()
+      } catch (error) {
+        console.error(`Error updating stats for player ${player.username}:`, error)
       }
     }
 
@@ -602,7 +591,6 @@ exports.getStatistics = async (req, res) => {
       return res.redirect('/login')
     }
 
-    // Ensure stats and roleDistribution have fallback values
     const stats = user.stats || {
       gamesPlayed: 0,
       gamesWon: 0,
@@ -615,7 +603,6 @@ exports.getStatistics = async (req, res) => {
       }
     }
 
-    // Check if user is admin to view others' stats
     const isAdmin = user.isAdmin || false
     let allUsers = []
     if (isAdmin) {
@@ -659,41 +646,22 @@ exports.getStatistics = async (req, res) => {
   }
 }
 
-// Getting Dashboard
-exports.getDashboard = async (req, res) => {
+// Get leaderboard
+exports.getLeaderboard = async (req, res) => {
   try {
     const userId = req.session.userId
-    console.log('Session userId:', userId) // Debug log
     if (!userId) {
       return res.redirect('/login')
     }
 
-    const user = await User.findById(userId)
-    console.log('User found:', user) // Debug log
-    if (!user) {
-      return res.redirect('/login')
-    }
+    const leaderboard = await User.getLeaderboardData()
 
-    // Fallback for stats if undefined
-    const stats = user.stats || {
-      gamesPlayed: 0,
-      gamesWon: 0,
-      gamesLost: 0,
-      winningRate: 0
-    }
-
-    res.render('dashboard', {
-      title: 'Dashboard',
-      username: user.username,
-      stats: {
-        gamesPlayed: stats.gamesPlayed,
-        gamesWon: stats.gamesWon,
-        gamesLost: stats.gamesLost,
-        winningRate: stats.winningRate.toFixed(2)
-      }
+    res.render('leaderboard', {
+      title: 'Leaderboard',
+      leaderboard
     })
   } catch (error) {
-    console.error('Error loading dashboard:', error)
-    res.status(500).send('Something broke!')
+    console.error('Error loading leaderboard:', error)
+    res.redirect('/dashboard')
   }
 }
