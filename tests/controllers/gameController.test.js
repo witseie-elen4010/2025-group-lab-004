@@ -1,9 +1,9 @@
 'use strict'
 
 const { createJoinGame } = require('../../src/controllers/gameController')
-
+const { mockGameModel, mockGameInstance } = require('../mocks/GameModelMock')
 describe('joinGame controller with DI', () => {
-  let mockGameModel, req, res, mockGameInstance
+  let req, res
 
   beforeEach(() => {
     req = {
@@ -18,15 +18,9 @@ describe('joinGame controller with DI', () => {
       json: jest.fn()
     }
 
-    mockGameModel = {
-      findOne: jest.fn()
-    }
-
-    // Mock game instance with save()
-    mockGameInstance = {
-      players: [],
-      save: jest.fn().mockResolvedValue(true)
-    }
+    // Reset players and mock behavior for each test
+    mockGameInstance.players = ['user456']
+    mockGameModel.findOne.mockResolvedValue(mockGameInstance)
   })
 
   it('should return 404 if game not found', async () => {
