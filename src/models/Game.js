@@ -1,8 +1,9 @@
 'use strict'
 
 const mongoose = require('mongoose')
+const { Schema, Types } = mongoose
 
-const gameSchema = new mongoose.Schema({
+const gameSchema = new Schema({
   code: {
     type: String,
     required: true,
@@ -11,7 +12,7 @@ const gameSchema = new mongoose.Schema({
   },
   players: [{
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Types.ObjectId,
       ref: 'User'
     },
     username: String,
@@ -43,11 +44,11 @@ const gameSchema = new mongoose.Schema({
   },
   votes: [{
     round: Number,
-    voterId: mongoose.Schema.Types.ObjectId,
-    votedForId: mongoose.Schema.Types.ObjectId
+    voterId: Types.ObjectId,
+    votedForId: Types.ObjectId
   }],
   eliminatedPlayers: [{
-    userId: mongoose.Schema.Types.ObjectId,
+    userId: Types.ObjectId,
     username: String,
     role: String,
     round: Number
