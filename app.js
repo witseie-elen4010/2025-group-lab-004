@@ -119,6 +119,7 @@ function assignRolesAndWords (players, wordPairs) {
   return assignments
 }
 
+
 io.on('connect', socket => {
   const username = socket.handshake.session.username
   console.log(`new player connected - ${username}`)
@@ -311,7 +312,7 @@ app.use((err, req, res, next) => {
 })
 
 // Server configuration
-const port = process.env.PORT || 5000
+const port = process.env.PORT || 3000
 require('./config/db')()
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
