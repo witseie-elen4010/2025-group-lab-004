@@ -217,9 +217,21 @@ io.on('connect', socket => {
     // Check win condition
     const result = checkWinCondition(gameId)
     if (result) {
-      io.to(gameId).emit('game_over', { winner: result.winner })
+      const game = games[gameId]
+      if (!game) {
+        console.error(`Game not found for ID: ${gameId}`)
+        return
+      }
+      io.to(gameId).emit('game_over', {
+        winner: result.winner,
+        players: Object.keys(game.players).map(username => ({
+          username,
+          role: assignment[gameId][username].role,
+          word: assignment[gameId][username].role === 'mr white' ? 'N/A' : assignment[gameId][username].word
+        }))
+      })
 
-      // Optionally clear game data to reset
+      // clean up
       delete games[gameId]
       delete assignment[gameId]
       delete eliminatedPlayers[gameId]
