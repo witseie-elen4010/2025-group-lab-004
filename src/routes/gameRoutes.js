@@ -34,3 +34,4 @@ router.get('/game_results', gameController.getGameResults)
 router.get('/statistics', gameController.getStatistics)
 
 module.exports = router
+
