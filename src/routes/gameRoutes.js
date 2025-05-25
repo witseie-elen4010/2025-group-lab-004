@@ -30,4 +30,7 @@ router.post('/vote', gameController.postVote)
 router.post('/end-voting', gameController.endVoting)
 router.get('/game_results', gameController.getGameResults)
 
+// Player Statistics route
+router.get('/statistics', gameController.getStatistics)
+
 module.exports = router

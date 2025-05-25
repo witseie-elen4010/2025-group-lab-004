@@ -9,7 +9,7 @@ const ensureAuthenticated = (req, res, next) => {
     return next()
   }
   res.redirect('/login')
-};
+}
 
 // Protect invite routes with this middleware
 router.get('/invite', ensureAuthenticated, inviteController.renderInvitePage)

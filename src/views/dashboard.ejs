@@ -1,13 +1,44 @@
 <% layout('home_layout.ejs') %>
-<link rel="stylesheet" href="/css/dashboard.css">
 
-<h3 class="heading">Do you want to create or join a game?</h3>
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h3 class="heading mb-0">Do you want to create or join a game?</h3>
+      </div>
+      <div class="card-body text-center">
+        <button onclick="window.location.href='/game_creation'" class="btn btn-primary btn-lg mr-3">Create Game</button>
+        <button onclick="window.location.href='/join'" class="btn btn-secondary btn-lg">Join Game</button>
+      </div>
+    </div>
 
-<div class="center-container">
-    <button onclick="window.location.href='/game_creation'" class="my-button">Create Game</button>
-    <button onclick="window.location.href='/join'" class="my-button">Join Game</button>
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="mb-0">Your Statistics</h2>
+      </div>
+      <div class="card-body">
+        <table class="table table-bordered">
+          <tbody>
+            <tr><th>Games Played</th><td><%= stats.gamesPlayed %></td></tr>
+            <tr><th>Games Won</th><td><%= stats.gamesWon %></td></tr>
+            <tr><th>Games Lost</th><td><%= stats.gamesLost %></td></tr>
+            <tr><th>Winning Rate</th><td><%= stats.winningRate %>%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="mb-0">Actions</h2>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item"><a href="/settings" class="btn btn-link p-0">Settings</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
-
-
 
 
