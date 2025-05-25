@@ -335,8 +335,26 @@
           clearInterval(timer);
           window.location.href = '/dashboard';
         }
-      }, 1000);
-    }
+        }, 10000);
+      }
+
+    socket.on('next_round', data=>{
+      let game_round = document.getElementById("game_status");
+      game_round.innerHTML = `GAME ROUND ${data.round}`;
+
+      document.getElementById('Clues').innerHTML = "";
+    })
+
+    socket.on('repeat_round', ()=>{
+      document.getElementById('Clues').innerHTML = "";
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = `No one was eliminated due to equal number of votes, the round repeats`;
+      statusDiv.style.display = 'block';
+    })
+
+    socket.on('alert', msg=>{
+      alert(msg);
+    })
     
     // Handle next round
     socket.on('next_round', data => {
