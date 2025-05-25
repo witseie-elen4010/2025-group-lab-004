@@ -11,10 +11,6 @@ A web-based implementation of the Undercover social deduction game where players
 - Game Creation
 - Game Joining
 
-### Coming Soon
-
-- Sprint 2
-- 
 ## Contributors
 
 - Erick Chauke
