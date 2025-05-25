@@ -1,6 +1,13 @@
 <% layout('home_layout.ejs') %>
 <link rel="stylesheet" href="/css/dashboard.css">
 
+ <div class="card">
+      <div class="card-header">
+        <h2 class="mb-0">Actions</h2>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+
 <h3 class="heading">Invite a Friend</h3>
 <% if (error) { %>
   <div class="alert alert-danger"><%= error %></div>
@@ -19,6 +26,13 @@
 
 <hr>
 
+<div class="card">
+      <div class="card-header">
+        <h2 class="mb-0">Invitations History</h2>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          
 <h3 class="heading">Invitations Received</h3>
 <% if (invites && invites.length > 0) { %>
   <ul class="invite-list">
@@ -69,3 +83,9 @@
     window.location.reload();
   });
 </script>
+
+<div class="text-center">
+      <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+  </div>
+</div>

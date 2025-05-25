@@ -319,6 +319,4 @@ server.listen(port, () => {
 
 app.set('io', io)
 
-const userSockets = new Map()
-
 module.exports = app

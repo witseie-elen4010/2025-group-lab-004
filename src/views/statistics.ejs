@@ -1,0 +1,53 @@
+<% layout('home_layout.ejs') %>
+
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h1 class="mb-0">Statistics for <%= user %></h1>
+      </div>
+      <div class="card-body">
+        <h2>Your Stats</h2>
+        <table class="table table-bordered">
+          <tbody>
+            <tr><th>Games Played</th><td><%= stats.gamesPlayed %></td></tr>
+            <tr><th>Games Won</th><td><%= stats.gamesWon %></td></tr>
+            <tr><th>Games Lost</th><td><%= stats.gamesLost %></td></tr>
+            <tr><th>Win Percentage</th><td><%= stats.winningRate.toFixed(2) %>%</td></tr>
+            <tr><th>Civilian Games</th><td><%= stats.roleDistribution.civilian %></td></tr>
+            <tr><th>Undercover Games</th><td><%= stats.roleDistribution.undercover %></td></tr>
+            <tr><th>Mr. White Games</th><td><%= stats.roleDistribution.mrwhite %></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <% if (isAdmin) { %>
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2 class="mb-0">All Users' Stats</h2>
+        </div>
+        <div class="card-body">
+          <% allUsers.forEach(user => { %>
+            <h3><%= user.username %></h3>
+            <table class="table table-bordered">
+              <tbody>
+                <tr><th>Games Played</th><td><%= user.stats.gamesPlayed %></td></tr>
+                <tr><th>Games Won</th><td><%= user.stats.gamesWon %></td></tr>
+                <tr><th>Games Lost</th><td><%= user.stats.gamesLost %></td></tr>
+                <tr><th>Win Percentage</th><td><%= user.stats.winningRate.toFixed(2) %>%</td></tr>
+                <tr><th>Civilian Games</th><td><%= user.stats.roleDistribution.civilian %></td></tr>
+                <tr><th>Undercover Games</th><td><%= user.stats.roleDistribution.undercover %></td></tr>
+                <tr><th>Mr. White Games</th><td><%= user.stats.roleDistribution.mrwhite %></td></tr>
+              </tbody>
+            </table>
+          <% }); %>
+        </div>
+      </div>
+    <% } %>
+
+    <div class="text-center">
+      <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+  </div>
+</div>

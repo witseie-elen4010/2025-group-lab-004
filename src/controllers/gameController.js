@@ -535,7 +535,6 @@ exports.getGameResults = async (req, res) => {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }
 
-    // Check if user was in this game
     const playerExists = game.players.some(p => p.userId.toString() === userId)
     if (!playerExists) {
       return res.redirect('/dashboard')
@@ -545,21 +544,37 @@ exports.getGameResults = async (req, res) => {
     const remainingCivilians = game.players.filter(
       p => !p.isEliminated && p.role === 'civilian'
     )
-
     const remainingImposters = game.players.filter(
       p => !p.isEliminated && (p.role === 'undercover' || p.role === 'mrwhite')
     )
 
     let winningRole, winners
-
     if (remainingImposters.length > 0 && remainingCivilians.length <= 1) {
-      // Imposters win
       winningRole = 'Imposters (Undercover & Mr. White)'
       winners = remainingImposters
     } else {
-      // Civilians win
       winningRole = 'Civilians'
       winners = game.players.filter(p => p.role === 'civilian')
+    }
+
+    // Update player stats
+    for (const player of game.players) {
+      const user = await User.findById(player.userId)
+      if (user) {
+        user.stats.gamesPlayed += 1
+        const isWinner = winners.some(w => w.userId.toString() === player.userId.toString())
+        if (isWinner) {
+          user.stats.gamesWon += 1
+        } else {
+          user.stats.gamesLost += 1
+        }
+        user.stats.winningRate = user.stats.gamesPlayed > 0
+          ? (user.stats.gamesWon / user.stats.gamesPlayed) * 100
+          : 0
+        // Update role distribution
+        user.stats.roleDistribution[player.role] += 1
+        await user.save()
+      }
     }
 
     res.render('game_results', {
@@ -571,5 +586,114 @@ exports.getGameResults = async (req, res) => {
   } catch (error) {
     console.error('Error showing game results:', error)
     res.redirect('/dashboard')
+  }
+}
+
+// Statistics
+exports.getStatistics = async (req, res) => {
+  try {
+    const userId = req.session.userId
+    if (!userId) {
+      return res.redirect('/login')
+    }
+
+    const user = await User.findById(userId)
+    if (!user) {
+      return res.redirect('/login')
+    }
+
+    // Ensure stats and roleDistribution have fallback values
+    const stats = user.stats || {
+      gamesPlayed: 0,
+      gamesWon: 0,
+      gamesLost: 0,
+      winningRate: 0,
+      roleDistribution: {
+        civilian: 0,
+        undercover: 0,
+        mrwhite: 0
+      }
+    }
+
+    // Check if user is admin to view others' stats
+    const isAdmin = user.isAdmin || false
+    let allUsers = []
+    if (isAdmin) {
+      const users = await User.find()
+      allUsers = users.map(u => ({
+        username: u.username,
+        stats: u.stats || {
+          gamesPlayed: 0,
+          gamesWon: 0,
+          gamesLost: 0,
+          winningRate: 0,
+          roleDistribution: {
+            civilian: 0,
+            undercover: 0,
+            mrwhite: 0
+          }
+        }
+      }))
+    }
+
+    res.render('statistics', {
+      title: 'Statistics',
+      user: user.username,
+      stats: {
+        gamesPlayed: stats.gamesPlayed,
+        gamesWon: stats.gamesWon,
+        gamesLost: stats.gamesLost,
+        winningRate: stats.winningRate,
+        roleDistribution: {
+          civilian: stats.roleDistribution.civilian,
+          undercover: stats.roleDistribution.undercover,
+          mrwhite: stats.roleDistribution.mrwhite
+        }
+      },
+      allUsers,
+      isAdmin
+    })
+  } catch (error) {
+    console.error('Error loading statistics:', error)
+    res.redirect('/dashboard')
+  }
+}
+
+// Getting Dashboard
+exports.getDashboard = async (req, res) => {
+  try {
+    const userId = req.session.userId
+    console.log('Session userId:', userId) // Debug log
+    if (!userId) {
+      return res.redirect('/login')
+    }
+
+    const user = await User.findById(userId)
+    console.log('User found:', user) // Debug log
+    if (!user) {
+      return res.redirect('/login')
+    }
+
+    // Fallback for stats if undefined
+    const stats = user.stats || {
+      gamesPlayed: 0,
+      gamesWon: 0,
+      gamesLost: 0,
+      winningRate: 0
+    }
+
+    res.render('dashboard', {
+      title: 'Dashboard',
+      username: user.username,
+      stats: {
+        gamesPlayed: stats.gamesPlayed,
+        gamesWon: stats.gamesWon,
+        gamesLost: stats.gamesLost,
+        winningRate: stats.winningRate.toFixed(2)
+      }
+    })
+  } catch (error) {
+    console.error('Error loading dashboard:', error)
+    res.status(500).send('Something broke!')
   }
 }

@@ -29,10 +29,33 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  wins: {
+  gamesWon: {
     type: Number,
     default: 0
-  }
+  },
+  gamesLost: {
+    type: Number,
+    default: 0
+  },
+  winningRate: {
+    type: Number,
+    default: 0
+  },
+  roleDistribution: {
+    civilian: {
+      type: Number,
+      default: 0
+    },
+    undercover: {
+      type: Number,
+      default: 0
+    },
+    mrwhite: {
+      type: Number,
+      default: 0
+    }
+  },
+  isAdmin: { type: Boolean, default: false } // for admin check
 })
 
 // Hash password before saving
