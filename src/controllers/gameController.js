@@ -2,21 +2,10 @@
 
 const Game = require('../models/Game')
 const User = require('../models/user')
-const Log = require('../models/Log') // Import the Log model
 
-
-// Save log action to database
-const logAction = async (action, username) => {
-  try {
-    const log = new Log({
-      action,
-      username
-    })
-    await log.save()
-    console.log(`[${new Date().toISOString()}] ${action} by ${username}`)
-  } catch (error) {
-    console.error('Error saving log:', error)
-  }
+// Admin logging function
+const logAction = (action, username) => {
+  console.log(`[${new Date().toISOString()}] ${action} by ${username}`)
 }
 
 // Handle for creating a game session
@@ -54,9 +43,7 @@ exports.postGame_Creation = async (req, res) => {
     })
 
     await game.save()
-    await logAction(`Game ${code} created`, user.username) // Updated to use async logAction
-
-
+    logAction(`Game ${code} created`, user.username)
 
     res.redirect(`/game_round?gameId=${game._id}`)
   } catch (error) {
@@ -68,63 +55,44 @@ exports.postGame_Creation = async (req, res) => {
   }
 }
 
-
-// Get Settings to display logs
-exports.getSettings = async (req, res) => {
+// Display dashboard
+exports.getDashboard = async (req, res) => {
   try {
     const userId = req.session.userId
-    console.log('Session userId:', req.session.userId)
     if (!userId) {
-      console.log('No userId in session, redirecting to login')
-
       return res.redirect('/login')
     }
 
     const user = await User.findById(userId)
-    console.log('User fetched:', user)
     if (!user) {
-      console.log('User not found, redirecting to login')
       return res.redirect('/login')
     }
 
-    console.log('User admin status:', user.isAdmin)
-    if (!user.isAdmin) {
-      console.log('User is not admin, sending 403')
-      return res.status(403).send('Unauthorized')
+    // Ensure stats structure exists
+    if (!user.stats) {
+      user.stats = {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        winningRate: 0
+      }
+      await user.save()
     }
 
-    let logs = await Log.find().sort({ timestamp: -1 })
-
-    const { date, action, username } = req.query
-    if (date) {
-      const startOfDay = new Date(date)
-      startOfDay.setHours(0, 0, 0, 0)
-      const endOfDay = new Date(date)
-      endOfDay.setHours(23, 59, 59, 999)
-      logs = logs.filter(log => log.timestamp >= startOfDay && log.timestamp <= endOfDay)
-    }
-    if (action) {
-      logs = logs.filter(log => log.action.toLowerCase().includes(action.toLowerCase()))
-    }
-    if (username) {
-      logs = logs.filter(log => log.username.toLowerCase().includes(username.toLowerCase()))
-    }
-
-    res.render('settings', {
-      title: 'Settings - Activity Logs',
-      logs,
-      query: req.query // Pass the query parameters to the template
+    res.render('dashboard', {
+      title: 'Dashboard',
+      username: user.username,
+      stats: {
+        gamesPlayed: user.stats.gamesPlayed,
+        gamesWon: user.stats.gamesWon,
+        gamesLost: user.stats.gamesLost,
+        winningRate: user.stats.winningRate.toFixed(2)
+      }
     })
   } catch (error) {
-    console.error('Error loading settings:', error)
+    console.error('Error loading dashboard:', error)
     res.status(500).send('Something broke!')
   }
-}
-
-// display dashboard
-exports.getDashboard = (req, res) => {
-  res.render('dashboard', { title: 'Dashboard' })
-
 }
 
 // Display Game create page
