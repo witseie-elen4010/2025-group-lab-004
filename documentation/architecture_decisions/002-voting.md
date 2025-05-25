@@ -29,7 +29,9 @@ Enhanced the Game schema to track:
 - Vote counting automatically identifies player with most votes
 - Game checks for end conditions after each elimination
 - Host-only controls manage game flow between rounds
-- Players only see their own role/word (hidden from others)
+- Players only see their own word (hidden from others)
+- In each game there is at least one undercover, when there are 3 players. There will be a maximum of  two civiians and at least one undercover(or Mr White.)
+- When there is 4 or more players, there is exactly 1 Mr White and 25% of the remaining players will be undercovers, with the rest being civilinas. This ensures that there more players there are in a game, the number of undercovers increases as well to improve on the level of difficulty and player experience.
 
 ## Design Decisions
 

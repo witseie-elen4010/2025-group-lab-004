@@ -3,6 +3,8 @@
 const express = require('express')
 const connectDB = require('./config/db')
 connectDB()
+const Game = require('./src/models/Game')
+const User = require('./src/models/user')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
@@ -26,10 +28,13 @@ app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'ejs')
 
 const sessionMiddleware = session({
-  secret: 'your-secret-key', // Replace with a strong secret in production
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false } // Set `secure: true` if using HTTPS
+  cookie: { 
+    secure: false, // Set true if using HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 })
 
 app.use(sessionMiddleware)
@@ -45,11 +50,15 @@ const wordPairs = [
   ['Beach', 'Desert'],
   ['Pizza', 'Burger'],
   ['Doctor', 'Nurse'],
-  ['Football', 'Rugby']
+  ['Football', 'Rugby'],
+  ['Coffee', 'Tea'],
+  ['Car', 'Bus'],
+  ['Cat', 'Dog'],
+  ['Mountain', 'Hill'],
+  ['Ocean', 'Sea']
 ]
 
-// // Role and word assignment algorithms
-
+// Role and word assignment algorithms
 function getRandomWordPair (pairs) {
   const randomIndex = Math.floor(Math.random() * pairs.length)
   return pairs[randomIndex]
@@ -119,15 +128,16 @@ function assignRolesAndWords (players, wordPairs) {
   return assignments
 }
 
+// Socket.IO connection handling
 io.on('connect', socket => {
   const username = socket.handshake.session.username
-  console.log(`new player connected - ${username}`)
+  console.log(`New player connected - ${username}`)
 
   // New player joining handler
   socket.on('joinGame', (gameId) => {
     socket.join(gameId)
     socket.data.gameId = gameId
-    console.log(socket.id)
+    console.log(`${username} joined game ${gameId}`)
 
     // construct game
     if (!games[gameId]) {
@@ -138,28 +148,53 @@ io.on('connect', socket => {
       games[gameId].game_round = 1
       games[gameId].voted = []
       eliminatedPlayers[gameId] = []
+      socket.to(gameId).emit('message', username)
     } else {
-      games[gameId].players[username] = socket.id
+      // Only add if not eliminated
+      if (!eliminatedPlayers[gameId].includes(username)) {
+        games[gameId].players[username] = socket.id
+        socket.to(gameId).emit('message', username)
+      }
     }
-    socket.to(gameId).emit('message', username)
+    
   })
 
   // Word Description handler
   socket.on('description', descrip => {
     const gameId = socket.data.gameId
+    if (!games[gameId]) return
+    
+    // Check if player is eliminated
+    if (eliminatedPlayers[gameId].includes(username)) {
+      socket.emit('alert', 'You are eliminated and cannot participate!')
+      return
+    }
+
     let player_turn = games[gameId].player_turn
     player_turn++
 
-    Object.values(games[gameId].players).forEach((socketid, index) => {
-      if (index == player_turn) {
-        io.to(socketid).emit('description', `Clue from ${username}: ${descrip}`)
-        io.to(socketid).emit('myTurn')
-      } else io.to(socketid).emit('description', `clue from ${username}: ${descrip}`)
+    // Send to active (non-eliminated) players only
+    Object.keys(games[gameId].players).forEach((playerName, index) => {
+      if (!eliminatedPlayers[gameId].includes(playerName)) {
+        const socketId = games[gameId].players[playerName]
+        if (index == player_turn) {
+          io.to(socketId).emit('description', `Clue from ${username}: ${descrip}`)
+          io.to(socketId).emit('myTurn')
+        } else {
+          io.to(socketId).emit('description', `clue from ${username}: ${descrip}`)
+        }
+      }
     })
 
-    if (player_turn == Object.values(games[gameId].players).length) {
-      Object.values(games[gameId].players).forEach((socketid, index) => {
-        io.to(socketid).emit('voteplayer')
+    // Check if all active players have given descriptions
+    const activePlayers = Object.keys(games[gameId].players).filter(p => !eliminatedPlayers[gameId].includes(p))
+    if (player_turn >= activePlayers.length) {
+      // Enable voting for all active players
+      Object.keys(games[gameId].players).forEach((playerName) => {
+        if (!eliminatedPlayers[gameId].includes(playerName)) {
+          const socketId = games[gameId].players[playerName]
+          io.to(socketId).emit('voteplayer')
+        }
       })
     }
 
@@ -169,38 +204,70 @@ io.on('connect', socket => {
   // start game handler
   socket.on('start', () => {
     const gameId = socket.data.gameId
-    if (Object.values(games[gameId].players).length >= 2) {
+    if (!games[gameId]) return
+
+    const activePlayers = Object.keys(games[gameId].players).filter(p => !eliminatedPlayers[gameId].includes(p))
+    if (activePlayers.length >= 3) {
       // need an algorithm to assign words based on roles
-      assignment[gameId] = assignRolesAndWords(Object.keys(games[gameId].players), wordPairs)
+      assignment[gameId] = assignRolesAndWords(activePlayers, wordPairs)
 
-      // Sending information to players  for UI update
-
-      Object.keys(games[gameId].players).forEach((user, index) => {
+      // Sending information to players for UI update
+      activePlayers.forEach((user, index) => {
+        const socketId = games[gameId].players[user]
         if (index == games[gameId].player_turn) {
-          io.to(games[gameId].players[user]).emit('word', assignment[gameId][user].word)
-          io.to(games[gameId].players[user]).emit('myTurn')
-          io.to(games[gameId].players[user]).emit('next_round', { round: games[gameId].game_round })
+          io.to(socketId).emit('word', assignment[gameId][user].word)
+          io.to(socketId).emit('myTurn')
+          io.to(socketId).emit('next_round', { round: games[gameId].game_round })
         } else {
-          io.to(games[gameId].players[user]).emit('word', assignment[gameId][user].word)
-          io.to(games[gameId].players[user]).emit('next_round', { round: games[gameId].game_round })
+          io.to(socketId).emit('word', assignment[gameId][user].word)
+          io.to(socketId).emit('next_round', { round: games[gameId].game_round })
         }
       })
-    } else socket.emit('alert', 'players must be atleast 3')
+    } else {
+      socket.emit('alert', 'players must be at least 3')
+    }
   })
 
   socket.on('eliminate', user => {
+
     const gameId = socket.data.gameId
+    if (!games[gameId]) return
+    
+    // Check if voting player is eliminated
+    if (eliminatedPlayers[gameId].includes(username)) {
+      socket.emit('alert', 'You are eliminated and cannot vote!')
+      return
+    }
+
     games[gameId].voted.push(user)
-    console.log(games[gameId].voted.length)
+
     if (games[gameId].voted.length === Object.keys(games[gameId].players).length) {
       const mostfre = mostFrequentString(games[gameId].voted)
-      games[gameId].player_turn = 0
-      games[gameId].game_round += 1
-      games[gameId].voted = []
+      if (mostfre.length == 1){
+        games[gameId].player_turn = 0
+        games[gameId].game_round += 1
+        games[gameId].voted = []
 
-      Object.values(games[gameId].players).forEach((socketid, index) => {
-        io.to(socketid).emit('eliminated', mostfre)
-      })
+        Object.values(games[gameId].players).forEach((socketid, index) => {
+          io.to(socketid).emit('eliminated', mostfre)
+        })
+      }
+      else{
+
+        // repeat round
+        games[gameId].player_turn = 0;
+        games[gameId].voted = [];
+        Object.keys(games[gameId].players).forEach((user, index) => {
+          if (index == games[gameId].player_turn) {
+            io.to(games[gameId].players[user]).emit('myTurn')
+            io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
+            
+          } else {
+            io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
+          }
+        })
+
+      }
     }
   })
 
@@ -226,8 +293,8 @@ io.on('connect', socket => {
         winner: result.winner,
         players: Object.keys(game.players).map(username => ({
           username,
-          role: assignment[gameId][username].role,
-          word: assignment[gameId][username].role === 'mr white' ? 'N/A' : assignment[gameId][username].word
+          role: assignment[gameId][username]?.role || 'unknown',
+          word: assignment[gameId][username]?.role === 'mr white' ? 'N/A' : assignment[gameId][username]?.word || 'N/A'
         }))
       })
 
@@ -236,33 +303,57 @@ io.on('connect', socket => {
       delete assignment[gameId]
       delete eliminatedPlayers[gameId]
     } else {
-      Object.values(games[gameId].players).forEach((sockid, index) => {
+      // Continue to next round - only send to active players
+      const activePlayers = Object.keys(games[gameId].players).filter(p => !eliminatedPlayers[gameId].includes(p))
+      activePlayers.forEach((playerName, index) => {
+        const socketId = games[gameId].players[playerName]
         if (index === games[gameId].player_turn) {
-          io.to(sockid).emit('next_round', { round: games[gameId].game_round })
-          io.to(sockid).emit('myTurn')
+          io.to(socketId).emit('next_round', { round: games[gameId].game_round })
+          io.to(socketId).emit('myTurn')
         } else {
-          io.to(sockid).emit('next_round', { round: games[gameId].game_round })
+          io.to(socketId).emit('next_round', { round: games[gameId].game_round })
         }
       })
     }
   })
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log(`Player disconnected - ${username}`)
+    const gameId = socket.data.gameId
+    if (gameId && games[gameId] && games[gameId].players && games[gameId].players[username]) {
+      // Remove player from game on disconnect
+      delete games[gameId].players[username]
+      
+      // Notify other players
+      socket.to(gameId).emit('playerDisconnected', username)
+      
+      // If no players left, clean up game
+      if (Object.keys(games[gameId].players).length === 0) {
+        delete games[gameId]
+        delete assignment[gameId]
+        delete eliminatedPlayers[gameId]
+      }
+    }
+  })
 })
 
+// Helper functions
 function mostFrequentString (arr) {
   const freq = {}
   let maxCount = 0
   let mostCommon = null
 
   for (const str of arr) {
-    freq[str] = (freq[str] || 0) + 1
-
+    freq[str] = (freq[str] || 0) + 1;
     if (freq[str] > maxCount) {
-      maxCount = freq[str]
-      mostCommon = str
+      maxCount = freq[str];
     }
   }
 
-  return mostCommon
+  mostCommon = Object.keys(freq).filter(str => freq[str] === maxCount);
+
+  return mostCommon;
 }
 
 function checkWinCondition (gameId) {
@@ -285,6 +376,23 @@ function checkWinCondition (gameId) {
   return null // No winner yet
 }
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack)
+  
+  // Don't expose error details in production
+  const isDevelopment = process.env.NODE_ENV !== 'production'
+  
+  res.status(err.status || 500).render('error', {
+    title: 'Error',
+    error: {
+      status: err.status || 500,
+      message: err.message || 'Something went wrong!',
+      stack: isDevelopment ? err.stack : null
+    }
+  })
+})
+
 // Routes
 const authRoutes = require('./src/routes/authRoutes')
 app.use('/', authRoutes)
@@ -298,23 +406,30 @@ const gameRoutes = require('./src/routes/gameRoutes')
 app.use('/', gameRoutes)
 
 app.get('/', (req, res) => {
+  if (req.session && req.session.userId) {
+    return res.redirect('/dashboard')
+  }
   res.render('home', { title: 'FindMrWhite' })
 })
 
+// 404 handler
 app.use((req, res) => {
-  res.status(404).send('Page Not Found')
-})
-
-app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.status(500).send('Something broke!')
+  res.status(404).render('error', {
+    title: 'Page Not Found',
+    error: {
+      status: 404,
+      message: 'The page you are looking for does not exist.',
+      stack: null
+    }
+  })
 })
 
 // Server configuration
-const port = process.env.PORT || 5000
+const port = process.env.PORT || 3000
 require('./config/db')()
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
 })
 
 app.set('io', io)

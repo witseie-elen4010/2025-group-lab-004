@@ -1,68 +1,162 @@
-'use strict'
+// tests/controllers/gameController.test.js
+const gameController = require('../../src/controllers/gameController')
 
-const { createJoinGame } = require('../../src/controllers/gameController')
+// Mocks
+const mockSave = jest.fn()
+const mockGameInstance = {
+  _id: 'mockGameId',
+  code: 'TEST123',
+  players: [],
+  status: 'waiting',
+  save: mockSave
+}
 
-describe('joinGame controller with DI', () => {
-  let mockGameModel, req, res, mockGameInstance
+// Mock User and Game models
+jest.mock('../../src/models/User', () => ({
+  findById: jest.fn()
+}))
+jest.mock('../../src/models/Game', () => {
+  const mockGame = jest.fn(() => mockGameInstance)
+  mockGame.findOne = jest.fn()
+  return mockGame
+})
+
+const Game = require('../../src/models/Game')
+const User = require('../../src/models/user')
+
+describe('gameController.postGame_Creation', () => {
+  let req, res
 
   beforeEach(() => {
     req = {
-      body: {
-        code: 'ABC123',
-        userId: 'user123'
-      }
+      body: { code: 'TEST123' },
+      session: {}
     }
 
     res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn()
+      render: jest.fn(),
+      redirect: jest.fn()
     }
 
-    mockGameModel = {
-      findOne: jest.fn()
-    }
-
-    // Mock game instance with save()
-    mockGameInstance = {
-      players: [],
-      save: jest.fn().mockResolvedValue(true)
-    }
+    mockSave.mockClear()
+    Game.findOne.mockReset()
+    User.findById.mockReset()
   })
 
-  it('should return 404 if game not found', async () => {
-    mockGameModel.findOne.mockResolvedValue(null)
-
-    const joinGame = createJoinGame(mockGameModel)
-    await joinGame(req, res)
-
-    expect(res.status).toHaveBeenCalledWith(404)
-    expect(res.json).toHaveBeenCalledWith({ error: 'Game not found' })
+  it('should redirect to login if user is not logged in', async () => {
+    await gameController.postGame_Creation(req, res)
+    expect(res.redirect).toHaveBeenCalledWith('/login')
   })
 
-  it('should return 400 if user already in the game', async () => {
-    mockGameInstance.players = ['user123']
-    mockGameModel.findOne.mockResolvedValue(mockGameInstance)
+  it('should render error if game code already exists', async () => {
+    req.session.userId = 'user123'
+    Game.findOne.mockResolvedValue({ code: 'TEST123' })
 
-    const joinGame = createJoinGame(mockGameModel)
-    await joinGame(req, res)
+    await gameController.postGame_Creation(req, res)
 
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({ error: 'User already in game' })
-  })
-
-  it('should add user to game and return success', async () => {
-    mockGameInstance.players = ['user456'] // some other user
-    mockGameModel.findOne.mockResolvedValue(mockGameInstance)
-
-    const joinGame = createJoinGame(mockGameModel)
-    await joinGame(req, res)
-
-    expect(mockGameInstance.players).toContain('user123')
-    expect(mockGameInstance.save).toHaveBeenCalled()
-    expect(res.status).toHaveBeenCalledWith(200)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Joined successfully',
-      game: mockGameInstance
+    expect(res.render).toHaveBeenCalledWith('game_creation', {
+      title: 'Create Game',
+      Error: 'This game code already exists'
     })
+  })
+
+  it('should redirect if user not found', async () => {
+    req.session.userId = 'user123'
+    Game.findOne.mockResolvedValue(null)
+    User.findById.mockResolvedValue(null)
+
+    await gameController.postGame_Creation(req, res)
+
+    expect(res.redirect).toHaveBeenCalledWith('/login')
+  })
+
+  it('should save game and redirect to game_round', async () => {
+    req.session.userId = 'user123'
+    Game.findOne.mockResolvedValue(null)
+    User.findById.mockResolvedValue({ username: 'testuser' })
+
+    await gameController.postGame_Creation(req, res)
+
+    expect(mockSave).toHaveBeenCalled()
+    expect(res.redirect).toHaveBeenCalledWith('/game_round?gameId=mockGameId')
+  })
+})
+
+describe('gameController.createJoinGame', () => {
+  let req, res
+
+  beforeEach(() => {
+    req = {
+      body: { code: 'TEST123' },
+      session: {}
+    }
+
+    res = {
+      render: jest.fn(),
+      redirect: jest.fn()
+    }
+
+    mockSave.mockClear()
+    Game.findOne.mockReset()
+    User.findById.mockReset()
+    mockGameInstance.players = []
+    mockGameInstance.status = 'waiting'
+  })
+
+  it('should redirect to login if user not logged in', async () => {
+    await gameController.createJoinGame(req, res)
+    expect(res.redirect).toHaveBeenCalledWith('/login')
+  })
+
+  it('should render error if game not found', async () => {
+    req.session.userId = 'user123'
+    Game.findOne.mockResolvedValue(null)
+
+    await gameController.createJoinGame(req, res)
+    expect(res.render).toHaveBeenCalledWith('join-game', {
+      userId: 'user123',
+      message: 'Game not found'
+    })
+  })
+
+  it('should render error if game already started', async () => {
+    req.session.userId = 'user123'
+    mockGameInstance.status = 'started'
+    Game.findOne.mockResolvedValue(mockGameInstance)
+
+    await gameController.createJoinGame(req, res)
+    expect(res.render).toHaveBeenCalledWith('join-game', {
+      userId: 'user123',
+      message: 'Game has already started'
+    })
+  })
+
+  it('should redirect if user already in game', async () => {
+    req.session.userId = 'user123'
+    mockGameInstance.status = 'waiting'
+    mockGameInstance.players = [{ userId: 'user123' }]
+    Game.findOne.mockResolvedValue(mockGameInstance)
+
+    await gameController.createJoinGame(req, res)
+    expect(res.redirect).toHaveBeenCalledWith('/game_round?gameId=mockGameId')
+  })
+
+  it('should add user and redirect to game_round', async () => {
+    req.session.userId = 'user123'
+    mockGameInstance.status = 'waiting'
+    mockGameInstance.players = []
+    Game.findOne.mockResolvedValue(mockGameInstance)
+    User.findById.mockResolvedValue({ username: 'testuser' })
+
+    await gameController.createJoinGame(req, res)
+
+    expect(mockGameInstance.players).toContainEqual({
+      userId: 'user123',
+      username: 'testuser',
+      role: 'civilian',
+      isEliminated: false
+    })
+    expect(mockSave).toHaveBeenCalled()
+    expect(res.redirect).toHaveBeenCalledWith('/game_round?gameId=mockGameId')
   })
 })
