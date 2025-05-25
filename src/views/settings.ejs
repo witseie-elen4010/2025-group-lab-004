@@ -1,0 +1,56 @@
+<% layout('home_layout.ejs') %>
+
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h1 class="mb-0">Activity Logs</h1>
+      </div>
+      <div class="card-body">
+        <!-- Filter Form -->
+        <form method="GET" action="/settings" class="mb-4">
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label for="date" class="form-label">Date</label>
+              <input type="date" class="form-control" id="date" name="date" value="<%= query.date || '' %>">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="action" class="form-label">Action</label>
+              <input type="text" class="form-control" id="action" name="action" placeholder="e.g., Game created" value="<%= query.action || '' %>">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="username" class="form-label">Username</label>
+              <input type="text" class="form-control" id="username" name="username" placeholder="e.g., TokeloMphahlele" value="<%= query.username || '' %>">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Filter</button>
+          <a href="/settings" class="btn btn-secondary">Clear Filters</a>
+        </form>
+
+        <!-- Logs Table -->
+        <% if (logs.length > 0) { %>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Username</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% logs.forEach(log => { %>
+                <tr>
+                  <td><%= log.timestamp.toISOString() %></td>
+                  <td><%= log.action %></td>
+                  <td><%= log.username %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        <% } else { %>
+          <p class="text-center">No logs found.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>

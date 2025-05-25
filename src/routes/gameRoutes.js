@@ -33,5 +33,7 @@ router.get('/game_results', gameController.getGameResults)
 // Player Statistics route
 router.get('/statistics', gameController.getStatistics)
 
-module.exports = router
+// Settings route for logs
+router.get('/settings', gameController.getSettings)
 
+module.exports = router
