@@ -6,10 +6,13 @@ A web-based implementation of the Undercover social deduction game where players
 
 ### Implemented
 
-- User Registration: New users can create accounts with secure password storage
+- User Registration
 - User Login
 - Game Creation
 - Game Joining
+- Game Invitation
+- Game Core Functionality
+- Player Satistics
 
 ## Contributors
 
