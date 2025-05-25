@@ -99,15 +99,13 @@ function assignRolesAndWords (players, wordPairs) {
   }
 
   const remaining = shuffledPlayers.length
-  const half = Math.floor(remaining / 2)
+  let numUndercovers = Math.floor(remaining * 0.25)
+  if (remaining >= 4 && numUndercovers < 1) numUndercovers = 1
 
-  // Assign Undercover
-  for (let i = 0; i < half; i++) {
+  // Step 3: Assign Undercover
+  for (let i = 0; i < numUndercovers; i++) {
     const undercoverPlayer = shuffledPlayers.pop()
-    assignments[undercoverPlayer] = {
-      role: 'undercover',
-      word: undercoverWord
-    }
+    assignments[undercoverPlayer] = { role: 'undercover', word: undercoverWord }
   }
 
   // Assign Civilians
