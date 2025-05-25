@@ -4,6 +4,17 @@ const express = require('express')
 const router = express.Router()
 const gameController = require('../controllers/gameController')
 
+// Middleware to ensure authentication
+const ensureAuthenticated = (req, res, next) => {
+  if (req.session && req.session.userId) {
+    return next()
+  }
+  res.redirect('/login')
+}
+
+// Apply authentication middleware to all game routes
+router.use(ensureAuthenticated)
+
 // Render the join game page
 router.get('/join', (req, res) => {
   res.render('join-game', {
@@ -30,8 +41,16 @@ router.post('/vote', gameController.postVote)
 router.post('/end-voting', gameController.endVoting)
 router.get('/game_results', gameController.getGameResults)
 
-// Player Statistics route
+// Player Statistics and Leaderboard routes
 router.get('/statistics', gameController.getStatistics)
+router.get('/leaderboard', gameController.getLeaderboard)
+
+// Settings route (placeholder for future implementation)
+router.get('/settings', (req, res) => {
+  res.render('settings', { 
+    title: 'Settings',
+    message: 'Settings page coming soon!'
+  })
+})
 
 module.exports = router
-
