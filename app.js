@@ -148,13 +148,15 @@ io.on('connect', socket => {
       games[gameId].game_round = 1
       games[gameId].voted = []
       eliminatedPlayers[gameId] = []
+      socket.to(gameId).emit('message', username)
     } else {
       // Only add if not eliminated
       if (!eliminatedPlayers[gameId].includes(username)) {
         games[gameId].players[username] = socket.id
+        socket.to(gameId).emit('message', username)
       }
     }
-    socket.to(gameId).emit('message', username)
+    
   })
 
   // Word Description handler
@@ -349,7 +351,7 @@ function mostFrequentString (arr) {
     }
   }
 
-  const mostCommon = Object.keys(freq).filter(str => freq[str] === maxCount);
+  mostCommon = Object.keys(freq).filter(str => freq[str] === maxCount);
 
   return mostCommon;
 }

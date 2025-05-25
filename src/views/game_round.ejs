@@ -334,9 +334,9 @@
         if (countdown <= 0) {
           clearInterval(timer);
           window.location.href = '/dashboard';
+        }
         }, 10000);
       }
-    });
 
     socket.on('next_round', data=>{
       let game_round = document.getElementById("game_status");
@@ -355,10 +355,6 @@
     socket.on('alert', msg=>{
       alert(msg);
     })
-    
-        }
-      }, 1000);
-    }
     
     // Handle next round
     socket.on('next_round', data => {
