@@ -169,7 +169,7 @@ exports.createJoinGame = async (req, res) => {
   }
 }
 
-// Get game round
+// Get game round - SIMPLIFIED: Let sockets handle most game logic
 exports.getGameRound = async (req, res) => {
   try {
     const gameId = req.query.gameId
@@ -192,24 +192,24 @@ exports.getGameRound = async (req, res) => {
       return res.redirect(`/game_results?gameId=${gameId}`)
     }
 
-    const playerIndex = game.players.findIndex(p =>
-      p.userId.toString() === userId
-    )
+    const currentPlayer = game.players.find(p => p.userId.toString() === userId)
 
-    if (playerIndex === -1) {
+    if (!currentPlayer) {
       return res.redirect('/dashboard')
     }
 
-    const playerHasVoted = game.votes.some(vote =>
+    // Allow all players to see the page - socket handles the game flow
+    const playerHasVoted = game.votes ? game.votes.some(vote =>
       vote.round === game.currentRound &&
       vote.voterId.toString() === userId
-    )
+    ) : false
 
     const activePlayers = game.players.filter(p => !p.isEliminated)
-    const votesThisRound = game.votes.filter(v => v.round === game.currentRound)
+    const votesThisRound = game.votes ? game.votes.filter(v => v.round === game.currentRound) : []
     const allPlayersVoted = votesThisRound.length === activePlayers.length
 
-    const isHost = game.players[0].userId.toString() === userId
+    // Any active player can control game flow
+    const isHost = activePlayers.length > 0 && activePlayers[0].userId.toString() === userId
 
     res.render('game_round', {
       title: 'Game Round',
@@ -225,82 +225,23 @@ exports.getGameRound = async (req, res) => {
   }
 }
 
-// Start game with role assignment
+// SIMPLIFIED: Most game logic handled by sockets in app.js
 exports.startGameRound = async (req, res) => {
-  try {
-    const { gameId } = req.body
-    const userId = req.session.userId
+  // Just redirect back - socket handles the start logic
+  const { gameId } = req.body
+  res.redirect(`/game_round?gameId=${gameId}`)
+}
 
-    if (!userId) {
-      return res.redirect('/login')
-    }
+exports.postVote = async (req, res) => {
+  // Socket handles voting - just redirect back
+  const { gameId } = req.body
+  res.redirect(`/game_round?gameId=${gameId}`)
+}
 
-    const game = await Game.findById(gameId)
-    if (!game) {
-      return res.redirect('/dashboard')
-    }
-
-    if (game.players[0].userId.toString() !== userId) {
-      return res.redirect(`/game_round?gameId=${gameId}`)
-    }
-
-    if (game.status !== 'waiting') {
-      return res.redirect(`/game_round?gameId=${gameId}`)
-    }
-
-    const playerCount = game.players.length
-    const roles = Array(playerCount).fill('civilian')
-
-    if (playerCount >= 4) {
-      const undercoverIndex = Math.floor(Math.random() * playerCount)
-      roles[undercoverIndex] = 'undercover'
-
-      if (playerCount >= 5) {
-        let mrWhiteIndex
-        do {
-          mrWhiteIndex = Math.floor(Math.random() * playerCount)
-        } while (mrWhiteIndex === undercoverIndex)
-
-        roles[mrWhiteIndex] = 'mrwhite'
-      }
-    }
-
-    const wordPairs = [
-      { civilian: 'Beach', undercover: 'Shore' },
-      { civilian: 'Pizza', undercover: 'Pasta' },
-      { civilian: 'Car', undercover: 'Bus' },
-      { civilian: 'Cat', undercover: 'Dog' },
-      { civilian: 'Coffee', undercover: 'Tea' }
-    ]
-
-    const wordPair = wordPairs[Math.floor(Math.random() * wordPairs.length)]
-
-    for (let i = 0; i < game.players.length; i++) {
-      const player = game.players[i]
-      player.role = roles[i]
-
-      if (player.role === 'civilian') {
-        player.word = wordPair.civilian
-      } else if (player.role === 'undercover') {
-        player.word = wordPair.undercover
-      } else {
-        player.word = 'unknown'
-      }
-    }
-
-    game.status = 'in-progress'
-    game.currentRound = 1
-    game.civilianWord = wordPair.civilian
-    game.undercoverWord = wordPair.undercover
-
-    await game.save()
-    logAction(`Game ${game.code} started`, req.session.username)
-
-    res.redirect(`/game_round?gameId=${gameId}`)
-  } catch (error) {
-    console.error('Error starting game:', error)
-    res.redirect('/dashboard')
-  }
+exports.endVoting = async (req, res) => {
+  // Socket handles voting end - just redirect back
+  const { gameId } = req.body
+  res.redirect(`/game_round?gameId=${gameId}`)
 }
 
 // Handle word description
@@ -366,148 +307,7 @@ exports.postWordDescription = async (req, res) => {
   }
 }
 
-// Handle player vote
-exports.postVote = async (req, res) => {
-  try {
-    const { gameId, votedForId } = req.body
-    const voterId = req.session.userId
-
-    if (!voterId) {
-      return res.redirect('/login')
-    }
-
-    const game = await Game.findById(gameId)
-    if (!game || game.status !== 'in-progress') {
-      return res.redirect('/dashboard')
-    }
-
-    const voter = game.players.find(p =>
-      p.userId.toString() === voterId && !p.isEliminated
-    )
-
-    if (!voter) {
-      return res.redirect(`/game_round?gameId=${gameId}`)
-    }
-
-    const votedPlayer = game.players.find(p =>
-      p.userId.toString() === votedForId && !p.isEliminated
-    )
-
-    if (!votedPlayer) {
-      return res.redirect(`/game_round?gameId=${gameId}`)
-    }
-
-    const existingVote = game.votes.find(v =>
-      v.round === game.currentRound && v.voterId.toString() === voterId
-    )
-
-    if (existingVote) {
-      return res.redirect(`/game_round?gameId=${gameId}`)
-    }
-
-    game.votes.push({
-      round: game.currentRound,
-      voterId,
-      votedForId
-    })
-
-    await game.save()
-    logAction(`Player voted in game ${game.code}`, req.session.username)
-
-    res.redirect(`/game_round?gameId=${gameId}`)
-  } catch (error) {
-    console.error('Error processing vote:', error)
-    res.redirect('/dashboard')
-  }
-}
-
-// End voting and process results
-exports.endVoting = async (req, res) => {
-  try {
-    const { gameId } = req.body
-    const userId = req.session.userId
-
-    if (!userId) {
-      return res.redirect('/login')
-    }
-
-    const game = await Game.findById(gameId)
-    if (!game || game.status !== 'in-progress') {
-      return res.redirect('/dashboard')
-    }
-
-    // Allow any active (non-eliminated) player to end voting, not just host
-    const activePlayer = game.players.find(p => 
-      p.userId.toString() === userId && !p.isEliminated
-    )
-    
-    if (!activePlayer) {
-      return res.redirect(`/game_round?gameId=${gameId}`)
-    }
-
-    const votesThisRound = game.votes.filter(v => v.round === game.currentRound)
-    const voteCount = {}
-    votesThisRound.forEach(vote => {
-      const id = vote.votedForId.toString()
-      voteCount[id] = (voteCount[id] || 0) + 1
-    })
-
-    let maxVotes = 0
-    let eliminatedPlayerId = null
-
-    for (const [playerId, votes] of Object.entries(voteCount)) {
-      if (votes > maxVotes) {
-        maxVotes = votes
-        eliminatedPlayerId = playerId
-      }
-    }
-
-    if (eliminatedPlayerId) {
-      const playerIndex = game.players.findIndex(
-        p => p.userId.toString() === eliminatedPlayerId
-      )
-
-      if (playerIndex !== -1) {
-        const eliminatedPlayer = game.players[playerIndex]
-        eliminatedPlayer.isEliminated = true
-        eliminatedPlayer.eliminatedInRound = game.currentRound
-
-        game.eliminatedPlayers = game.eliminatedPlayers || []
-        game.eliminatedPlayers.push({
-          userId: eliminatedPlayer.userId,
-          username: eliminatedPlayer.username,
-          role: eliminatedPlayer.role,
-          round: game.currentRound
-        })
-
-        // Check win conditions with original logic
-        const remainingCivilians = game.players.filter(
-          p => !p.isEliminated && p.role === 'civilian'
-        ).length
-
-        const remainingImposters = game.players.filter(
-          p => !p.isEliminated && (p.role === 'undercover' || p.role === 'mrwhite')
-        ).length
-
-        if (remainingCivilians <= 1 || remainingImposters === 0) {
-          game.status = 'completed'
-        } else {
-          game.currentRound += 1
-        }
-
-        logAction(`Player ${eliminatedPlayer.username} eliminated in game ${game.code}`, req.session.username)
-      }
-    }
-
-    await game.save()
-    res.redirect(`/game_round?gameId=${gameId}`)
-  } catch (error) {
-    console.error('Error ending voting:', error)
-    res.redirect('/dashboard')
-  }
-}
-
-// Show game results
+// Show game results - Stats are updated by app.js socket logic
 exports.getGameResults = async (req, res) => {
   try {
     const gameId = req.query.gameId
@@ -549,21 +349,6 @@ exports.getGameResults = async (req, res) => {
     } else {
       winningRole = 'Civilians'
       winners = game.players.filter(p => p.role === 'civilian')
-    }
-
-    // Update player stats using the new method
-    for (const player of game.players) {
-      try {
-        const user = await User.findById(player.userId)
-        if (user) {
-          const isWinner = winners.some(w => w.userId.toString() === player.userId.toString())
-          const wasSurvivor = !player.isEliminated
-          user.updateGameStats(player.role, isWinner, wasSurvivor)
-          await user.save()
-        }
-      } catch (error) {
-        console.error(`Error updating stats for player ${player.username}:`, error)
-      }
     }
 
     res.render('game_results', {
@@ -654,14 +439,161 @@ exports.getLeaderboard = async (req, res) => {
       return res.redirect('/login')
     }
 
-    const leaderboard = await User.getLeaderboardData()
+    const currentUser = await User.findById(userId)
+    if (!currentUser) {
+      return res.redirect('/login')
+    }
+
+    let leaderboard = []
+    try {
+      leaderboard = await User.getLeaderboardData()
+      console.log(`Leaderboard loaded with ${leaderboard.length} players`)
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error)
+      leaderboard = []
+    }
+
+    const totalPlayers = leaderboard.length
+    const totalGames = leaderboard.reduce((sum, player) => sum + player.stats.gamesPlayed, 0)
+    const averageWinRate = totalPlayers > 0 
+      ? (leaderboard.reduce((sum, player) => sum + player.stats.winRate, 0) / totalPlayers).toFixed(1)
+      : 0
+
+    const currentUserRank = leaderboard.findIndex(player => player.username === currentUser.username) + 1
 
     res.render('leaderboard', {
       title: 'Leaderboard',
-      leaderboard
+      leaderboard,
+      currentUser: currentUser.username,
+      currentUserRank: currentUserRank || 'Unranked',
+      totalPlayers,
+      totalGames,
+      averageWinRate
     })
   } catch (error) {
     console.error('Error loading leaderboard:', error)
+    res.render('leaderboard', {
+      title: 'Leaderboard',
+      leaderboard: [],
+      currentUser: 'Unknown',
+      currentUserRank: 'Unranked',
+      totalPlayers: 0,
+      totalGames: 0,
+      averageWinRate: 0,
+      error: 'Unable to load leaderboard data. Please try again later.'
+    })
+  }
+}
+
+// Settings functionality
+exports.getSettings = async (req, res) => {
+  try {
+    const userId = req.session.userId
+    if (!userId) {
+      return res.redirect('/login')
+    }
+
+    const user = await User.findById(userId)
+    if (!user) {
+      return res.redirect('/login')
+    }
+
+    // Initialize user preferences if they don't exist
+    if (!user.preferences) {
+      user.preferences = {
+        soundEffects: true,
+        notifications: true,
+        theme: 'light',
+        publicProfile: true,
+        allowInvites: true
+      }
+      await user.save()
+    }
+
+    res.render('settings', {
+      title: 'Settings',
+      user: user,
+      message: req.query.message || null,
+      error: req.query.error || null
+    })
+  } catch (error) {
+    console.error('Error loading settings:', error)
     res.redirect('/dashboard')
+  }
+}
+
+// Update settings
+exports.postSettings = async (req, res) => {
+  try {
+    const userId = req.session.userId
+    if (!userId) {
+      return res.redirect('/login')
+    }
+
+    const user = await User.findById(userId)
+    if (!user) {
+      return res.redirect('/login')
+    }
+
+    const { 
+      soundEffects, 
+      notifications, 
+      theme, 
+      publicProfile, 
+      allowInvites,
+      newPassword,
+      confirmPassword,
+      currentPassword
+    } = req.body
+
+    // Update preferences
+    if (!user.preferences) {
+      user.preferences = {}
+    }
+
+    user.preferences.soundEffects = soundEffects === 'on'
+    user.preferences.notifications = notifications === 'on'
+    user.preferences.theme = theme || 'light'
+    user.preferences.publicProfile = publicProfile === 'on'
+    user.preferences.allowInvites = allowInvites === 'on'
+
+    // Handle password change if requested
+    if (newPassword && newPassword.trim() !== '') {
+      if (newPassword !== confirmPassword) {
+        return res.redirect('/settings?error=' + encodeURIComponent('New passwords do not match'))
+      }
+
+      if (newPassword.length < 8) {
+        return res.redirect('/settings?error=' + encodeURIComponent('Password must be at least 8 characters long'))
+      }
+
+      // Verify current password if provided
+      if (currentPassword) {
+        const bcrypt = require('bcrypt')
+        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password)
+        if (!isCurrentPasswordValid) {
+          return res.redirect('/settings?error=' + encodeURIComponent('Current password is incorrect'))
+        }
+      }
+
+      // Set new password (pre-save middleware will hash it)
+      user.password = newPassword
+      logAction(`Password changed for user ${user.username}`, user.username)
+    }
+
+    await user.save()
+
+    // Emit settings update via socket
+    const io = req.app.get('io')
+    if (io) {
+      io.to(`user_${userId}`).emit('settings_updated', {
+        preferences: user.preferences
+      })
+    }
+
+    res.redirect('/settings?message=' + encodeURIComponent('Settings updated successfully'))
+  } catch (error) {
+    console.error('Error updating settings:', error)
+    res.redirect('/settings?error=' + encodeURIComponent('An error occurred while updating settings'))
   }
 }
