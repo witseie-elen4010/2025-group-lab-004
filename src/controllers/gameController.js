@@ -437,10 +437,10 @@ exports.endVoting = async (req, res) => {
     }
 
     // Allow any active (non-eliminated) player to end voting, not just host
-    const activePlayer = game.players.find(p => 
+    const activePlayer = game.players.find(p =>
       p.userId.toString() === userId && !p.isEliminated
     )
-    
+
     if (!activePlayer) {
       return res.redirect(`/game_round?gameId=${gameId}`)
     }

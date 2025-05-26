@@ -79,9 +79,9 @@ const userSchema = new mongoose.Schema({
       }
     }
   },
-  isAdmin: { 
-    type: Boolean, 
-    default: false 
+  isAdmin: {
+    type: Boolean,
+    default: false
   },
   lastActive: {
     type: Date,
@@ -108,7 +108,7 @@ userSchema.methods.validatePassword = async function (password) {
 }
 
 // Method to update game stats
-userSchema.methods.updateGameStats = function(role, isWinner, wasSurvivor) {
+userSchema.methods.updateGameStats = function (role, isWinner, wasSurvivor) {
   if (!this.stats) {
     this.stats = {
       gamesPlayed: 0,
@@ -138,15 +138,15 @@ userSchema.methods.updateGameStats = function(role, isWinner, wasSurvivor) {
     this.stats.eliminatedCount += 1
   }
 
-  this.stats.winningRate = this.stats.gamesPlayed > 0 
-    ? (this.stats.gamesWon / this.stats.gamesPlayed) * 100 
+  this.stats.winningRate = this.stats.gamesPlayed > 0
+    ? (this.stats.gamesWon / this.stats.gamesPlayed) * 100
     : 0
 
   this.lastActive = new Date()
 }
 
 // Static method to get leaderboard data
-userSchema.statics.getLeaderboardData = async function() {
+userSchema.statics.getLeaderboardData = async function () {
   const users = await this.find({ 'stats.gamesPlayed': { $gt: 0 } })
     .select('username stats')
     .lean()

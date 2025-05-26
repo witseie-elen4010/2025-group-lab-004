@@ -47,7 +47,7 @@ router.get('/leaderboard', gameController.getLeaderboard)
 
 // Settings route (placeholder for future implementation)
 router.get('/settings', (req, res) => {
-  res.render('settings', { 
+  res.render('settings', {
     title: 'Settings',
     message: 'Settings page coming soon!'
   })

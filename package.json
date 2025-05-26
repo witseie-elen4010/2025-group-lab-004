@@ -52,7 +52,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "nodemon": "^3.1.9",
+    "nodemon": "^3.1.10",
     "socket.io-client": "^4.8.1",
     "standard": "^17.1.2"
   },
@@ -65,3 +65,4 @@
     "test": "tests"
   }
 }
+

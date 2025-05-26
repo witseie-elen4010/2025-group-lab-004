@@ -31,7 +31,7 @@ const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     secure: false, // Set true if using HTTPS
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
@@ -156,14 +156,13 @@ io.on('connect', socket => {
         socket.to(gameId).emit('message', username)
       }
     }
-    
   })
 
   // Word Description handler
   socket.on('description', descrip => {
     const gameId = socket.data.gameId
     if (!games[gameId]) return
-    
+
     // Check if player is eliminated
     if (eliminatedPlayers[gameId].includes(username)) {
       socket.emit('alert', 'You are eliminated and cannot participate!')
@@ -229,10 +228,9 @@ io.on('connect', socket => {
   })
 
   socket.on('eliminate', user => {
-
     const gameId = socket.data.gameId
     if (!games[gameId]) return
-    
+
     // Check if voting player is eliminated
     if (eliminatedPlayers[gameId].includes(username)) {
       socket.emit('alert', 'You are eliminated and cannot vote!')
@@ -243,7 +241,7 @@ io.on('connect', socket => {
 
     if (games[gameId].voted.length === Object.keys(games[gameId].players).length) {
       const mostfre = mostFrequentString(games[gameId].voted)
-      if (mostfre.length == 1){
+      if (mostfre.length == 1) {
         games[gameId].player_turn = 0
         games[gameId].game_round += 1
         games[gameId].voted = []
@@ -251,22 +249,18 @@ io.on('connect', socket => {
         Object.values(games[gameId].players).forEach((socketid, index) => {
           io.to(socketid).emit('eliminated', mostfre)
         })
-      }
-      else{
-
+      } else {
         // repeat round
-        games[gameId].player_turn = 0;
-        games[gameId].voted = [];
+        games[gameId].player_turn = 0
+        games[gameId].voted = []
         Object.keys(games[gameId].players).forEach((user, index) => {
           if (index == games[gameId].player_turn) {
             io.to(games[gameId].players[user]).emit('myTurn')
             io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
-            
           } else {
             io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
           }
         })
-
       }
     }
   })
@@ -324,10 +318,10 @@ io.on('connect', socket => {
     if (gameId && games[gameId] && games[gameId].players && games[gameId].players[username]) {
       // Remove player from game on disconnect
       delete games[gameId].players[username]
-      
+
       // Notify other players
       socket.to(gameId).emit('playerDisconnected', username)
-      
+
       // If no players left, clean up game
       if (Object.keys(games[gameId].players).length === 0) {
         delete games[gameId]
@@ -345,15 +339,15 @@ function mostFrequentString (arr) {
   let mostCommon = null
 
   for (const str of arr) {
-    freq[str] = (freq[str] || 0) + 1;
+    freq[str] = (freq[str] || 0) + 1
     if (freq[str] > maxCount) {
-      maxCount = freq[str];
+      maxCount = freq[str]
     }
   }
 
-  mostCommon = Object.keys(freq).filter(str => freq[str] === maxCount);
+  mostCommon = Object.keys(freq).filter(str => freq[str] === maxCount)
 
-  return mostCommon;
+  return mostCommon
 }
 
 function checkWinCondition (gameId) {
@@ -379,10 +373,10 @@ function checkWinCondition (gameId) {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack)
-  
+
   // Don't expose error details in production
   const isDevelopment = process.env.NODE_ENV !== 'production'
-  
+
   res.status(err.status || 500).render('error', {
     title: 'Error',
     error: {
@@ -425,7 +419,7 @@ app.use((req, res) => {
 })
 
 // Server configuration
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 5000
 require('./config/db')()
 server.listen(port, () => {
   console.log(`FindMrWhite server running on port ${port}`)
