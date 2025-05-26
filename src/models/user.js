@@ -79,6 +79,33 @@ const userSchema = new mongoose.Schema({
       }
     }
   },
+  settings: {
+    soundEffects: {
+      type: Boolean,
+      default: true
+    },
+    notifications: {
+      type: Boolean,
+      default: true
+    },
+    theme: {
+      type: String,
+      enum: ['light', 'dark'],
+      default: 'light'
+    },
+    publicProfile: {
+      type: Boolean,
+      default: true
+    },
+    allowInvites: {
+      type: Boolean,
+      default: true
+    },
+    autoJoinInvites: {
+      type: Boolean,
+      default: false
+    }
+  },
   isAdmin: { 
     type: Boolean, 
     default: false 
@@ -147,7 +174,10 @@ userSchema.methods.updateGameStats = function(role, isWinner, wasSurvivor) {
 
 // Static method to get leaderboard data
 userSchema.statics.getLeaderboardData = async function() {
-  const users = await this.find({ 'stats.gamesPlayed': { $gt: 0 } })
+  const users = await this.find({ 
+    'stats.gamesPlayed': { $gt: 0 },
+    'settings.publicProfile': { $ne: false } // Only include users with public profiles
+  })
     .select('username stats')
     .lean()
 
@@ -179,6 +209,21 @@ userSchema.statics.getLeaderboardData = async function() {
     // Tertiary sort: by games played
     return b.stats.gamesPlayed - a.stats.gamesPlayed
   })
+}
+
+// Method to check if user can receive invites
+userSchema.methods.canReceiveInvites = function() {
+  return this.settings?.allowInvites !== false
+}
+
+// Method to get user preferences for themes/sounds
+userSchema.methods.getPreferences = function() {
+  return {
+    soundEffects: this.settings?.soundEffects !== false,
+    notifications: this.settings?.notifications !== false,
+    theme: this.settings?.theme || 'light',
+    autoJoinInvites: this.settings?.autoJoinInvites === true
+  }
 }
 
 const User = mongoose.model('User', userSchema)
