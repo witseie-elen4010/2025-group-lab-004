@@ -273,8 +273,7 @@ io.on('connect', socket => {
       delete games[gameId].players[user]
     }
 
-    // winning condition here
-    // Check win condition
+    // Check win condition immediately after player removal
     const result = checkWinCondition(gameId)
     if (result) {
       const game = games[gameId]
@@ -283,25 +282,38 @@ io.on('connect', socket => {
         return
       }
 
+      console.log(`Game ${gameId} ended. Winner: ${result.winner}`)
+
       // Update player stats in database when game ends
       updatePlayerStats(gameId, result.winner)
 
+      // Emit game over to ALL players in the room (including eliminated ones)
       io.to(gameId).emit('game_over', {
         winner: result.winner,
-        players: Object.keys(game.players).map(username => ({
+        players: Object.keys(assignment[gameId]).map(username => ({
           username,
           role: assignment[gameId][username]?.role || 'unknown',
           word: assignment[gameId][username]?.role === 'mr white' ? 'N/A' : assignment[gameId][username]?.word || 'N/A'
         }))
       })
 
-      // clean up
-      delete games[gameId]
-      delete assignment[gameId]
-      delete eliminatedPlayers[gameId]
+      // After a short delay, force all players to leave the room
+      setTimeout(() => {
+        io.to(gameId).emit('force_dashboard_redirect')
+        
+        // Clean up game data
+        delete games[gameId]
+        delete assignment[gameId]
+        delete eliminatedPlayers[gameId]
+        
+        console.log(`Game ${gameId} cleaned up`)
+      }, 8000) // 8 seconds to show results
+
     } else {
       // Continue to next round - only send to active players
       const activePlayers = Object.keys(games[gameId].players).filter(p => !eliminatedPlayers[gameId].includes(p))
+      console.log(`Continuing to next round. Active players: ${activePlayers.length}`)
+      
       activePlayers.forEach((playerName, index) => {
         const socketId = games[gameId].players[playerName]
         if (index === games[gameId].player_turn) {
@@ -386,8 +398,12 @@ function checkWinCondition (gameId) {
   if (!games[gameId] || !assignment[gameId]) return null
   const alivePlayers = Object.keys(games[gameId].players)
 
-  if (alivePlayers.length === 2) {
+  console.log(`Checking win condition for game ${gameId}: ${alivePlayers.length} players remaining`)
+
+  // Game ends when 2 or fewer players remain
+  if (alivePlayers.length <= 2) {
     const roles = alivePlayers.map(player => assignment[gameId][player]?.role)
+    console.log('Remaining player roles:', roles)
 
     const civilians = roles.filter(role => role === 'civilian').length
 
@@ -397,6 +413,11 @@ function checkWinCondition (gameId) {
 
     if (roles.includes('mr white')) return { winner: 'mr white' }
     if (roles.includes('undercover')) return { winner: 'undercovers' }
+    
+    // If only 1 player left or mixed roles, civilians win by default
+    if (alivePlayers.length === 1) {
+      return { winner: 'civilians' }
+    }
   }
 
   return null // No winner yet

@@ -397,32 +397,82 @@
       }
     });
    
-    // Handle game over (from app.js)
+    // Handle game over (from app.js) - FIXED: Better end game flow
     socket.on('game_over', ({ winner, players }) => {
       console.log('Game over, winner:', winner);
-      const gameOverDiv = document.getElementById('game-over-message');
-      if (gameOverDiv) {
-        gameOverDiv.innerHTML = `🎉 <strong>Game Over!</strong><br><strong>${winner.toUpperCase()}</strong> wins!`;
-        gameOverDiv.style.display = 'block';
-      }
-     
-      // Disable all voting
+      
+      // Disable all interactions
       document.querySelectorAll(".vote-btn").forEach(btn => btn.disabled = true);
       document.querySelectorAll(".Elimi-form").forEach(form => form.remove());
+      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
       
-      // Show player roles
-      if (players && players.length > 0) {
-        const rolesDiv = document.createElement('div');
-        rolesDiv.className = 'alert alert-info mt-3';
-        rolesDiv.innerHTML = '<h4>Player Roles:</h4>' + 
-          players.map(p => `<p><strong>${p.username}:</strong> ${p.role} (${p.word})</p>`).join('');
-        gameOverDiv.parentElement.appendChild(rolesDiv);
+      // Show winner announcement
+      const gameOverDiv = document.getElementById('game-over-message');
+      if (gameOverDiv) {
+        gameOverDiv.innerHTML = `
+          <div class="text-center">
+            <h2>🎉 <strong>GAME OVER!</strong></h2>
+            <h3 style="color: #28a745;"><strong>${winner.toUpperCase()}</strong> WINS!</h3>
+            <p class="mt-3">Returning to dashboard in <span id="game-over-countdown">8</span> seconds...</p>
+          </div>
+        `;
+        gameOverDiv.className = 'alert alert-success text-center';
+        gameOverDiv.style.display = 'block';
+        gameOverDiv.style.fontSize = '1.2rem';
+        
+        // Start countdown
+        let countdown = 8;
+        const countdownElement = document.getElementById('game-over-countdown');
+        const countdownTimer = setInterval(() => {
+          countdown--;
+          if (countdownElement) {
+            countdownElement.textContent = countdown;
+          }
+          if (countdown <= 0) {
+            clearInterval(countdownTimer);
+            window.location.href = '/dashboard';
+          }
+        }, 1000);
       }
       
-      // Redirect to results
-      setTimeout(() => {
-        window.location.href = `/game_results?gameId=<%= gameData._id %>`;
-      }, 5000);
+      // Show player roles in a nice format
+      if (players && players.length > 0) {
+        const rolesDiv = document.createElement('div');
+        rolesDiv.className = 'alert alert-info mt-4';
+        rolesDiv.innerHTML = `
+          <h4 class="text-center mb-3">🎭 Player Roles Revealed</h4>
+          <div class="row">
+            ${players.map(p => `
+              <div class="col-md-6 mb-2">
+                <div class="card">
+                  <div class="card-body text-center py-2">
+                    <strong>${p.username}</strong><br>
+                    <span class="badge badge-primary">${p.role.toUpperCase()}</span><br>
+                    <small class="text-muted">${p.word}</small>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        
+        // Insert after game over message
+        const container = gameOverDiv.parentElement;
+        container.appendChild(rolesDiv);
+      }
+      
+      // Hide other UI elements
+      const cluesCont = document.getElementById('clue_cont');
+      if (cluesCont) cluesCont.style.display = 'none';
+      
+      const statusDiv = document.getElementById('status');
+      if (statusDiv) statusDiv.style.display = 'none';
+    });
+    
+    // Handle forced dashboard redirect (ensures all players leave)
+    socket.on('force_dashboard_redirect', () => {
+      console.log('Forced redirect to dashboard');
+      window.location.href = '/dashboard';
     });
 
     // Handle player disconnection
