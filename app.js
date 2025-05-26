@@ -3,8 +3,6 @@
 const express = require('express')
 const connectDB = require('./config/db')
 connectDB()
-const Game = require('./src/models/Game')
-const User = require('./src/models/user')
 const bodyParser = require('body-parser')
 const path = require('path')
 const ejsMate = require('ejs-mate')
@@ -12,6 +10,9 @@ const session = require('express-session')
 const http = require('http')
 const socketIO = require('socket.io')
 const sharedSession = require('express-socket.io-session')
+
+// Add User import at the top
+const User = require('./src/models/user')
 
 const app = express()
 const server = http.createServer(app)
@@ -131,7 +132,16 @@ function assignRolesAndWords (players, wordPairs) {
 // Socket.IO connection handling
 io.on('connect', socket => {
   const username = socket.handshake.session.username
-  console.log(`New player connected - ${username}`)
+  const userId = socket.handshake.session.userId
+  console.log(`New player connected - ${username} (ID: ${userId})`)
+
+  // Store user info in socket for easy access
+  socket.userData = { username, userId }
+
+  // Join user to their personal room for notifications
+  if (userId) {
+    socket.join(`user_${userId}`)
+  }
 
   // New player joining handler
   socket.on('joinGame', (gameId) => {
@@ -148,15 +158,13 @@ io.on('connect', socket => {
       games[gameId].game_round = 1
       games[gameId].voted = []
       eliminatedPlayers[gameId] = []
-      socket.to(gameId).emit('message', username)
     } else {
       // Only add if not eliminated
       if (!eliminatedPlayers[gameId].includes(username)) {
         games[gameId].players[username] = socket.id
-        socket.to(gameId).emit('message', username)
       }
     }
-    
+    socket.to(gameId).emit('message', username)
   })
 
   // Word Description handler
@@ -229,7 +237,6 @@ io.on('connect', socket => {
   })
 
   socket.on('eliminate', user => {
-
     const gameId = socket.data.gameId
     if (!games[gameId]) return
     
@@ -240,34 +247,20 @@ io.on('connect', socket => {
     }
 
     games[gameId].voted.push(user)
-
-    if (games[gameId].voted.length === Object.keys(games[gameId].players).length) {
+    console.log(`Votes received: ${games[gameId].voted.length}`)
+    
+    const activePlayers = Object.keys(games[gameId].players).filter(p => !eliminatedPlayers[gameId].includes(p))
+    if (games[gameId].voted.length === activePlayers.length) {
       const mostfre = mostFrequentString(games[gameId].voted)
-      if (mostfre.length == 1){
-        games[gameId].player_turn = 0
-        games[gameId].game_round += 1
-        games[gameId].voted = []
+      games[gameId].player_turn = 0
+      games[gameId].game_round += 1
+      games[gameId].voted = []
 
-        Object.values(games[gameId].players).forEach((socketid, index) => {
-          io.to(socketid).emit('eliminated', mostfre)
-        })
-      }
-      else{
-
-        // repeat round
-        games[gameId].player_turn = 0;
-        games[gameId].voted = [];
-        Object.keys(games[gameId].players).forEach((user, index) => {
-          if (index == games[gameId].player_turn) {
-            io.to(games[gameId].players[user]).emit('myTurn')
-            io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
-            
-          } else {
-            io.to(games[gameId].players[user]).emit('repeat_round', { round: games[gameId].game_round })
-          }
-        })
-
-      }
+      // Notify all players about elimination - IMMEDIATE
+      Object.keys(games[gameId].players).forEach((playerName) => {
+        const socketId = games[gameId].players[playerName]
+        io.to(socketId).emit('eliminated', mostfre)
+      })
     }
   })
 
@@ -280,8 +273,7 @@ io.on('connect', socket => {
       delete games[gameId].players[user]
     }
 
-    // winning condition here
-    // Check win condition
+    // Check win condition immediately after player removal
     const result = checkWinCondition(gameId)
     if (result) {
       const game = games[gameId]
@@ -289,22 +281,39 @@ io.on('connect', socket => {
         console.error(`Game not found for ID: ${gameId}`)
         return
       }
+
+      console.log(`Game ${gameId} ended. Winner: ${result.winner}`)
+
+      // Update player stats in database when game ends
+      updatePlayerStats(gameId, result.winner)
+
+      // Emit game over to ALL players in the room (including eliminated ones)
       io.to(gameId).emit('game_over', {
         winner: result.winner,
-        players: Object.keys(game.players).map(username => ({
+        players: Object.keys(assignment[gameId]).map(username => ({
           username,
           role: assignment[gameId][username]?.role || 'unknown',
           word: assignment[gameId][username]?.role === 'mr white' ? 'N/A' : assignment[gameId][username]?.word || 'N/A'
         }))
       })
 
-      // clean up
-      delete games[gameId]
-      delete assignment[gameId]
-      delete eliminatedPlayers[gameId]
+      // After a short delay, force all players to leave the room
+      setTimeout(() => {
+        io.to(gameId).emit('force_dashboard_redirect')
+        
+        // Clean up game data
+        delete games[gameId]
+        delete assignment[gameId]
+        delete eliminatedPlayers[gameId]
+        
+        console.log(`Game ${gameId} cleaned up`)
+      }, 8000) // 8 seconds to show results
+
     } else {
       // Continue to next round - only send to active players
       const activePlayers = Object.keys(games[gameId].players).filter(p => !eliminatedPlayers[gameId].includes(p))
+      console.log(`Continuing to next round. Active players: ${activePlayers.length}`)
+      
       activePlayers.forEach((playerName, index) => {
         const socketId = games[gameId].players[playerName]
         if (index === games[gameId].player_turn) {
@@ -317,10 +326,39 @@ io.on('connect', socket => {
     }
   })
 
+  // Handle invite notifications (enhanced)
+  socket.on('join', (userId) => {
+    socket.join(`user_${userId}`)
+    console.log(`User ${username} joined notification room: user_${userId}`)
+  })
+
+  // Handle settings updates - notify other users if needed
+  socket.on('settings_updated', (data) => {
+    console.log(`Settings updated for user ${username}:`, data)
+    // You can add logic here to notify friends if privacy settings changed
+  })
+
+  // Handle user status updates
+  socket.on('user_status_update', (status) => {
+    // Broadcast user status to friends or game participants
+    socket.broadcast.emit('user_status_changed', {
+      username: username,
+      status: status,
+      timestamp: new Date()
+    })
+  })
+
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`Player disconnected - ${username}`)
     const gameId = socket.data.gameId
+    
+    // Update user's last active time in database
+    if (userId) {
+      User.findByIdAndUpdate(userId, { lastActive: new Date() })
+        .catch(err => console.error('Error updating last active:', err))
+    }
+    
     if (gameId && games[gameId] && games[gameId].players && games[gameId].players[username]) {
       // Remove player from game on disconnect
       delete games[gameId].players[username]
@@ -345,23 +383,27 @@ function mostFrequentString (arr) {
   let mostCommon = null
 
   for (const str of arr) {
-    freq[str] = (freq[str] || 0) + 1;
+    freq[str] = (freq[str] || 0) + 1
+
     if (freq[str] > maxCount) {
-      maxCount = freq[str];
+      maxCount = freq[str]
+      mostCommon = str
     }
   }
 
-  mostCommon = Object.keys(freq).filter(str => freq[str] === maxCount);
-
-  return mostCommon;
+  return mostCommon
 }
 
 function checkWinCondition (gameId) {
   if (!games[gameId] || !assignment[gameId]) return null
   const alivePlayers = Object.keys(games[gameId].players)
 
-  if (alivePlayers.length === 2) {
+  console.log(`Checking win condition for game ${gameId}: ${alivePlayers.length} players remaining`)
+
+  // Game ends when 2 or fewer players remain
+  if (alivePlayers.length <= 2) {
     const roles = alivePlayers.map(player => assignment[gameId][player]?.role)
+    console.log('Remaining player roles:', roles)
 
     const civilians = roles.filter(role => role === 'civilian').length
 
@@ -371,9 +413,61 @@ function checkWinCondition (gameId) {
 
     if (roles.includes('mr white')) return { winner: 'mr white' }
     if (roles.includes('undercover')) return { winner: 'undercovers' }
+    
+    // If only 1 player left or mixed roles, civilians win by default
+    if (alivePlayers.length === 1) {
+      return { winner: 'civilians' }
+    }
   }
 
   return null // No winner yet
+}
+
+// ADDED: Function to update player stats in database
+async function updatePlayerStats(gameId, winner) {
+  try {
+    if (!assignment[gameId]) return
+    
+    console.log(`Updating stats for game ${gameId}, winner: ${winner}`)
+    
+    // Get all players and their roles
+    const allPlayers = Object.keys(assignment[gameId])
+    const eliminatedPlayersList = eliminatedPlayers[gameId] || []
+    
+    for (const playerName of allPlayers) {
+      try {
+        // Find user by username
+        const user = await User.findOne({ username: playerName })
+        if (!user) {
+          console.log(`User not found: ${playerName}`)
+          continue
+        }
+        
+        const playerRole = assignment[gameId][playerName]?.role
+        const wasEliminated = eliminatedPlayersList.includes(playerName)
+        
+        // Determine if player won
+        let isWinner = false
+        if (winner === 'civilians' && playerRole === 'civilian') {
+          isWinner = true
+        } else if (winner === 'mr white' && playerRole === 'mr white') {
+          isWinner = true
+        } else if (winner === 'undercovers' && playerRole === 'undercover') {
+          isWinner = true
+        }
+        
+        // Update stats
+        user.updateGameStats(playerRole, isWinner, !wasEliminated)
+        await user.save()
+        
+        console.log(`✅ Updated stats for ${playerName}: Role: ${playerRole}, Won: ${isWinner}, Survived: ${!wasEliminated}`)
+      } catch (error) {
+        console.error(`Error updating stats for ${playerName}:`, error)
+      }
+    }
+  } catch (error) {
+    console.error('Error in updatePlayerStats:', error)
+  }
 }
 
 // Error handling middleware

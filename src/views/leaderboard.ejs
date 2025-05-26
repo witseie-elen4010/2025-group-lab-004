@@ -4,134 +4,141 @@
 <div class="leaderboard-page">
   <h2 class="text-center mb-4">🏆 FindMrWhite Leaderboard</h2>
   
-  <div class="leaderboard-stats mb-4">
-    <div class="row">
-      <div class="col-md-4 text-center">
-        <div class="stat-card">
-          <h4>Most Games Played</h4>
-          <% if (leaderboard && leaderboard.length > 0) { %>
-            <% const mostGames = leaderboard.reduce((max, p) => p.stats.gamesPlayed > max.stats.gamesPlayed ? p : max) %>
-            <p class="stat-value"><%= mostGames.username %></p>
-            <p class="stat-detail"><%= mostGames.stats.gamesPlayed %> games</p>
-          <% } %>
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger text-center">
+      <h4>Error Loading Leaderboard</h4>
+      <p><%= error %></p>
+      <a href="/dashboard" class="btn btn-primary">Return to Dashboard</a>
+    </div>
+  <% } else { %>
+    
+    <!-- Global Statistics -->
+    <div class="leaderboard-stats mb-4">
+      <div class="row">
+        <div class="col-md-3 text-center">
+          <div class="stat-card">
+            <h4>Total Players</h4>
+            <p class="stat-value"><%= totalPlayers || 0 %></p>
+          </div>
         </div>
-      </div>
-      <div class="col-md-4 text-center">
-        <div class="stat-card">
-          <h4>Most Wins</h4>
-          <% if (leaderboard && leaderboard.length > 0) { %>
-            <% const mostWins = leaderboard[0] %>
-            <p class="stat-value"><%= mostWins.username %></p>
-            <p class="stat-detail"><%= mostWins.stats.wins %> wins</p>
-          <% } %>
+        <div class="col-md-3 text-center">
+          <div class="stat-card">
+            <h4>Total Games</h4>
+            <p class="stat-value"><%= totalGames || 0 %></p>
+          </div>
         </div>
-      </div>
-      <div class="col-md-4 text-center">
-        <div class="stat-card">
-          <h4>Best Win Rate</h4>
-          <% if (leaderboard && leaderboard.length > 0) { %>
-            <% const bestRate = leaderboard.filter(p => p.stats.gamesPlayed >= 5)
-                                          .reduce((max, p) => p.stats.winRate > max.stats.winRate ? p : max, {stats: {winRate: 0}}) %>
-            <% if (bestRate.username) { %>
-              <p class="stat-value"><%= bestRate.username %></p>
-              <p class="stat-detail"><%= bestRate.stats.winRate %>%</p>
-            <% } else { %>
-              <p class="stat-detail">Min 5 games required</p>
-            <% } %>
-          <% } %>
+        <div class="col-md-3 text-center">
+          <div class="stat-card">
+            <h4>Average Win Rate</h4>
+            <p class="stat-value"><%= averageWinRate || 0 %>%</p>
+          </div>
+        </div>
+        <div class="col-md-3 text-center">
+          <div class="stat-card">
+            <h4>Your Rank</h4>
+            <p class="stat-value <%= currentUserRank === 'Unranked' ? 'unranked' : '' %>">
+              <%= currentUserRank || 'Unranked' %>
+            </p>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  
-  <div class="leaderboard-table-container">
+
+    <!-- Leaderboard Table -->
     <% if (leaderboard && leaderboard.length > 0) { %>
-      <table class="table table-dark table-striped table-hover">
-        <thead>
-          <tr>
-            <th class="text-center">Rank</th>
-            <th>Player</th>
-            <th class="text-center">Games</th>
-            <th class="text-center">Wins</th>
-            <th class="text-center">Losses</th>
-            <th class="text-center">Win Rate</th>
-            <th class="text-center">Survived</th>
-            <th class="text-center">Eliminated</th>
-            <th class="text-center" colspan="3">Role Breakdown</th>
-          </tr>
-          <tr>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th class="text-center sub-header">Civilian</th>
-            <th class="text-center sub-header">Undercover</th>
-            <th class="text-center sub-header">Mr. White</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% leaderboard.forEach((player, index) => { %>
-            <tr class="<%= index < 3 ? 'top-player' : '' %> player-row">
-              <td class="text-center rank-cell">
-                <% if (index === 0) { %>
-                  <span class="rank-medal">🥇</span>
-                <% } else if (index === 1) { %>
-                  <span class="rank-medal">🥈</span>
-                <% } else if (index === 2) { %>
-                  <span class="rank-medal">🥉</span>
-                <% } else { %>
-                  <span class="rank-number"><%= index + 1 %></span>
-                <% } %>
-              </td>
-              <td class="username-cell">
-                <strong><%= player.username %></strong>
-              </td>
-              <td class="text-center">
-                <span class="stat-badge"><%= player.stats.gamesPlayed %></span>
-              </td>
-              <td class="text-center">
-                <span class="wins-badge"><%= player.stats.wins %></span>
-              </td>
-              <td class="text-center">
-                <span class="losses-badge"><%= player.stats.losses %></span>
-              </td>
-              <td class="text-center">
-                <span class="win-rate <%= player.stats.winRate >= 50 ? 'high-win-rate' : 'low-win-rate' %>">
-                  <%= player.stats.winRate %>%
-                </span>
-              </td>
-              <td class="text-center">
-                <span class="survived-badge"><%= player.stats.survivedCount %></span>
-              </td>
-              <td class="text-center">
-                <span class="eliminated-badge"><%= player.stats.eliminatedCount %></span>
-              </td>
-              <td class="text-center">
-                <div class="role-stat">
-                  <span class="role-games"><%= player.stats.gamesAsCivilian %></span>
-                  <span class="role-wins civilian-wins"><%= player.stats.winsAsCivilian %>W</span>
-                </div>
-              </td>
-              <td class="text-center">
-                <div class="role-stat">
-                  <span class="role-games"><%= player.stats.gamesAsUndercover %></span>
-                  <span class="role-wins undercover-wins"><%= player.stats.winsAsUndercover %>W</span>
-                </div>
-              </td>
-              <td class="text-center">
-                <div class="role-stat">
-                  <span class="role-games"><%= player.stats.gamesAsMrWhite %></span>
-                  <span class="role-wins mrwhite-wins"><%= player.stats.winsAsMrWhite %>W</span>
-                </div>
-              </td>
+      <div class="leaderboard-table-container">
+        <table class="table table-dark table-striped table-hover">
+          <thead>
+            <tr>
+              <th class="text-center">Rank</th>
+              <th>Player</th>
+              <th class="text-center">Games</th>
+              <th class="text-center">Wins</th>
+              <th class="text-center">Losses</th>
+              <th class="text-center">Win Rate</th>
+              <th class="text-center">Survived</th>
+              <th class="text-center">Eliminated</th>
+              <th class="text-center" colspan="3">Role Performance</th>
             </tr>
-          <% }) %>
-        </tbody>
-      </table>
+            <tr>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th class="text-center sub-header">Civilian</th>
+              <th class="text-center sub-header">Undercover</th>
+              <th class="text-center sub-header">Mr. White</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% leaderboard.forEach((player, index) => { %>
+              <tr class="<%= index < 3 ? 'top-player' : '' %> <%= player.username === currentUser ? 'current-user-row' : '' %> player-row">
+                <td class="text-center rank-cell">
+                  <% if (index === 0) { %>
+                    <span class="rank-medal">🥇</span>
+                  <% } else if (index === 1) { %>
+                    <span class="rank-medal">🥈</span>
+                  <% } else if (index === 2) { %>
+                    <span class="rank-medal">🥉</span>
+                  <% } else { %>
+                    <span class="rank-number"><%= index + 1 %></span>
+                  <% } %>
+                </td>
+                <td class="username-cell">
+                  <strong>
+                    <%= player.username %>
+                    <% if (player.username === currentUser) { %>
+                      <span class="you-badge">YOU</span>
+                    <% } %>
+                  </strong>
+                </td>
+                <td class="text-center">
+                  <span class="stat-badge"><%= player.stats.gamesPlayed %></span>
+                </td>
+                <td class="text-center">
+                  <span class="wins-badge"><%= player.stats.wins %></span>
+                </td>
+                <td class="text-center">
+                  <span class="losses-badge"><%= player.stats.losses %></span>
+                </td>
+                <td class="text-center">
+                  <span class="win-rate <%= player.stats.winRate >= 50 ? 'high-win-rate' : 'low-win-rate' %>">
+                    <%= player.stats.winRate %>%
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="survived-badge"><%= player.stats.survivedCount %></span>
+                </td>
+                <td class="text-center">
+                  <span class="eliminated-badge"><%= player.stats.eliminatedCount %></span>
+                </td>
+                <td class="text-center">
+                  <div class="role-stat">
+                    <span class="role-games"><%= player.stats.gamesAsCivilian %></span>
+                    <span class="role-wins civilian-wins"><%= player.stats.winsAsCivilian %>W</span>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="role-stat">
+                    <span class="role-games"><%= player.stats.gamesAsUndercover %></span>
+                    <span class="role-wins undercover-wins"><%= player.stats.winsAsUndercover %>W</span>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="role-stat">
+                    <span class="role-games"><%= player.stats.gamesAsMrWhite %></span>
+                    <span class="role-wins mrwhite-wins"><%= player.stats.winsAsMrWhite %>W</span>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
     <% } else { %>
       <div class="alert alert-info text-center">
         <h4>No games have been completed yet!</h4>
@@ -139,8 +146,8 @@
         <a href="/dashboard" class="btn btn-primary">Start Playing</a>
       </div>
     <% } %>
-  </div>
-  
+  <% } %>
+
   <div class="text-center mt-4">
     <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
   </div>
@@ -164,6 +171,7 @@
   margin-bottom: 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
 .stat-value {
@@ -173,9 +181,8 @@
   margin: 10px 0;
 }
 
-.stat-detail {
-  font-size: 1.1em;
-  color: #ccc;
+.stat-value.unranked {
+  color: #6c757d;
 }
 
 .leaderboard-table-container {
@@ -198,6 +205,11 @@
   transition: all 0.3s ease;
 }
 
+.current-user-row {
+  background: linear-gradient(90deg, rgba(0, 123, 255, 0.2) 0%, rgba(0, 123, 255, 0.1) 100%) !important;
+  border-left: 4px solid #007bff;
+}
+
 .rank-medal {
   font-size: 2em;
 }
@@ -209,6 +221,16 @@
 
 .username-cell {
   font-size: 1.2em;
+}
+
+.you-badge {
+  background: #007bff;
+  color: white;
+  font-size: 0.7em;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  font-weight: normal;
 }
 
 .stat-badge {
@@ -296,69 +318,19 @@
   color: #dc3545;
 }
 
-/* Animations */
-.stat-card {
-  animation: slideIn 0.5s ease-out;
-}
-
-.player-row {
-  animation: fadeIn 0.3s ease-out;
-  animation-fill-mode: both;
-}
-
-.player-row:nth-child(1) { animation-delay: 0.1s; }
-.player-row:nth-child(2) { animation-delay: 0.2s; }
-.player-row:nth-child(3) { animation-delay: 0.3s; }
-.player-row:nth-child(4) { animation-delay: 0.4s; }
-.player-row:nth-child(5) { animation-delay: 0.5s; }
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 /* Top player effects */
 .top-player {
-  background: linear-gradient(90deg, 
-    rgba(255, 215, 0, 0.1) 0%, 
-    rgba(255, 215, 0, 0.05) 50%, 
+  background: linear-gradient(90deg,
+    rgba(255, 215, 0, 0.1) 0%,
+    rgba(255, 215, 0, 0.05) 50%,
     rgba(255, 215, 0, 0.1) 100%);
-  position: relative;
 }
 
-.top-player:before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(255, 215, 0, 0.1) 50%, 
-    transparent 100%);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+/* Responsive design */
+@media (max-width: 768px) {
+  .role-stat {
+    flex-direction: column;
+    gap: 2px;
+  }
 }
 </style>

@@ -53,6 +53,19 @@ exports.sendInvite = async (req, res) => {
       })
     }
 
+    // Check if user can receive invites
+    if (!toUser.canReceiveInvites()) {
+      const invites = await Invite.find({ toUser: req.user.username })
+      const sentInvites = await Invite.find({ fromUser: req.user.username })
+      return res.render('invite', {
+        title: 'Invite Friends',
+        user: req.user,
+        invites,
+        sentInvites,
+        error: 'This user has disabled game invitations'
+      })
+    }
+
     const invite = new Invite({
       fromUser,
       toUser: toUser.username,
@@ -69,8 +82,15 @@ exports.sendInvite = async (req, res) => {
       console.error('Email failed:', err.message)
     }
 
+    // Send socket notification respecting user settings
     const io = req.app.get('io')
-    io.to(toUser._id.toString()).emit('newInvite', { fromUser, gameId })
+    if (toUser.settings?.notifications !== false) {
+      io.to(`user_${toUser._id}`).emit('newInvite', { 
+        fromUser, 
+        gameId,
+        message: `${fromUser} invited you to join game ${gameId}`
+      })
+    }
 
     res.redirect('/invite')
   } catch (err) {

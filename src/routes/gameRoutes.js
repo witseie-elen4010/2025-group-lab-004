@@ -45,12 +45,8 @@ router.get('/game_results', gameController.getGameResults)
 router.get('/statistics', gameController.getStatistics)
 router.get('/leaderboard', gameController.getLeaderboard)
 
-// Settings route (placeholder for future implementation)
-router.get('/settings', (req, res) => {
-  res.render('settings', { 
-    title: 'Settings',
-    message: 'Settings page coming soon!'
-  })
-})
+// Settings routes with both GET and POST
+router.get('/settings', gameController.getSettings)
+router.post('/settings', gameController.postSettings)
 
 module.exports = router

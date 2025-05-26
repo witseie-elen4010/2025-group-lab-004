@@ -1,4 +1,4 @@
-<!-- src/views/game_round.ejs - Simple fix version -->
+<!-- src/views/game_round.ejs - FIXED: Proper socket integration with app.js -->
 <% layout('layout', { css: ['game_round'] }) %>
 <div class="game-container">
   <h2 class="text-center mb-4" id="game_status">
@@ -37,7 +37,7 @@
     </div>
    
     <h3>Players in Lobby</h3>
-    <div class="row">
+    <div class="row" id="player-container">
       <% gameData.players.forEach(player => { %>
         <div class="col-md-4 mb-3" id="<%= player.username %>">
           <div class="player-card">
@@ -56,24 +56,18 @@
       <% }) %>
     </div>
     <script>
-      const container = document.getElementById(`${sessionStorage.getItem('username')}`);
-      const form = container.querySelector(".Elimi-form");
-      if (form) form.remove();
+      // Remove vote button for current user
+      const currentUserContainer = document.getElementById(`${sessionStorage.getItem('username')}`);
+      if (currentUserContainer) {
+        const form = currentUserContainer.querySelector(".Elimi-form");
+        if (form) form.remove();
+      }
     </script>
    
     <% if (isHost) { %>
       <div class="alert alert-secondary mt-4 text-center" id="clue_cont">
-        <form action="/start-game-round" method="POST" id="start_form">
-          <input type="hidden" name="gameId" value="<%= gameData._id %>">
-          <button type="submit" class="control-btn btn btn-primary btn-lg" id="start_btn">Start Game</button>
-        </form>
+        <button type="button" class="control-btn btn btn-primary btn-lg" id="start_btn">Start Game</button>
       </div>
-      <script>
-        document.getElementById("start_form").addEventListener("submit", function(event) {
-          event.preventDefault();
-          socket.emit('start');
-        });
-      </script>
       <div id="Clues"></div>
     <% } else { %>
       <div class="alert alert-secondary mt-4 text-center" id="clue_cont">
@@ -85,19 +79,13 @@
     <% if (userId && gameData.players) { %>
       <% const currentPlayer = gameData.players.find(p => p.userId.toString() === userId) %>
       <% if (currentPlayer && !currentPlayer.isEliminated) { %>
-        <div class="player-info alert alert-info mb-4">
+        <div class="player-info alert alert-info mb-4" id="Player_word">
           <p><strong>Your Role:</strong> <%= currentPlayer.role.charAt(0).toUpperCase() + currentPlayer.role.slice(1) %></p>
-          <% if (currentPlayer.word) { %>
+          <% if (currentPlayer.word && currentPlayer.word !== 'unknown') { %>
             <p class="mb-0"><strong>Your Word:</strong> <%= currentPlayer.word %></p>
           <% } else if (currentPlayer.role === 'mrwhite') { %>
             <p class="mb-0"><strong>You are Mr. White!</strong> You don't know the word. Try to guess it from other players' descriptions.</p>
           <% } %>
-        </div>
-      <% } else if (currentPlayer && currentPlayer.isEliminated) { %>
-        <div class="alert alert-danger mb-4">
-          <h4><i class="fas fa-skull-crossbones"></i> You have been eliminated!</h4>
-          <p>You were eliminated in Round <%= currentPlayer.eliminatedInRound %>.</p>
-          <p><a href="/dashboard" class="btn btn-primary">Return to Dashboard</a></p>
         </div>
       <% } %>
     <% } %>
@@ -145,35 +133,10 @@
       </div>
     <% } %>
     
-    <!-- Host or Any Active Player Controls -->
-    <% if (currentUserActive && allPlayersVoted && gameData.status === 'in-progress') { %>
-      <div class="game-controls text-center mt-4 mb-4">
-        <form action="/end-voting" method="POST">
-          <input type="hidden" name="gameId" value="<%= gameData._id %>">
-          <button type="submit" class="control-btn btn btn-primary btn-lg">End Voting & Continue</button>
-        </form>
-      </div>
-    <% } %>
-   
-    <% if (playerHasVoted && !allPlayersVoted) { %>
-      <div class="alert alert-info mt-4 text-center">
-        <p class="mb-0">Waiting for all players to vote...</p>
-      </div>
-    <% } %>
-   
-    <% if (gameData.currentRound > 1 && gameData.eliminatedPlayers && gameData.eliminatedPlayers.length > 0) { %>
-      <div class="alert alert-secondary mt-3">
-        <p>Votes from previous round: </p>
-        <ul class="vote-history">
-          <% const prevRoundVotes = gameData.votes.filter(v => v.round === gameData.currentRound - 1) %>
-          <% prevRoundVotes.forEach(vote => { %>
-            <% const voter = gameData.players.find(p => p.userId.toString() === vote.voterId.toString()) %>
-            <% const votedFor = gameData.players.find(p => p.userId.toString() === vote.votedForId.toString()) %>
-            <li><%= voter ? voter.username : 'Unknown player' %> voted for <%= votedFor ? votedFor.username : 'Unknown player' %></li>
-          <% }) %>
-        </ul>
-      </div>
-    <% } %>
+    <div id="Clues"></div>
+    <div class="alert alert-secondary mt-4 text-center" id="clue_cont">
+      <p class="mb-0">Game in progress...</p>
+    </div>
   <% } %>
  
   <div class="mt-4 text-center">
@@ -183,19 +146,37 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    // Places to be updated
-    const playerCont = document.getElementById('active-players') || document.getElementsByClassName('row')[0];
-    
-    const code = sessionStorage.getItem('gameId');
+    // FIXED: Use the exact game ID from the database
+    const gameCode = '<%= gameData.code %>';  // Use the game code, not the MongoDB _id
     const currentUsername = sessionStorage.getItem('username');
     const socket = io();
     let isEliminated = false;
     
-    socket.emit('joinGame', code);
+    console.log('Connecting to game:', gameCode, 'as user:', currentUsername);
     
-    // Handle new player joining
+    // Store game code for later use
+    sessionStorage.setItem('gameId', gameCode);
+    
+    // Connect to game room using the 6-digit code (matches app.js)
+    socket.emit('joinGame', gameCode);
+    
+    // Handle new player joining (from app.js)
     socket.on('message', msg => {
-      if (playerCont && !isEliminated) {
+      console.log('New player joined:', msg);
+      if (isEliminated) return;
+      
+      const playerContainer = document.getElementById('player-container') || 
+                             document.getElementById('active-players') || 
+                             document.querySelector('.row');
+      
+      if (playerContainer) {
+        // Check if player already exists
+        const existingPlayer = document.getElementById(msg);
+        if (existingPlayer) {
+          console.log('Player already exists, skipping');
+          return;
+        }
+        
         const temp = document.createElement('div');
         temp.innerHTML = `<div class="col-md-4 mb-3" id="${msg}">
                             <div class="player-card">
@@ -206,14 +187,15 @@
                               </form>
                             </div>
                           </div>`;
-        playerCont.appendChild(temp.firstElementChild);
+        playerContainer.appendChild(temp.firstElementChild);
         
         // Add event listener to new vote button
         document.querySelector(`#${msg} .player-card .Elimi-form`).addEventListener("submit", function(event) {
             event.preventDefault();
-            if (isEliminated) return; // Prevent eliminated players from voting
+            if (isEliminated) return;
             
             const formData = new FormData(this);
+            console.log('Voting for:', formData.get("votedForId"));
             socket.emit("eliminate", formData.get("votedForId"));
             document.querySelectorAll(".vote-btn").forEach(button => {
               button.disabled = true;
@@ -222,95 +204,134 @@
       }
     });
    
-    // Assign the user word
+    // Handle start game button (only for host)
+    const startBtn = document.getElementById('start_btn');
+    if (startBtn) {
+      startBtn.addEventListener('click', function() {
+        console.log('Starting game...');
+        socket.emit('start');
+        this.disabled = true;
+        this.textContent = 'Starting...';
+      });
+    }
+   
+    // Assign word when game starts (from app.js)
     socket.on('word', word => {
+      console.log('Received word:', word);
       if (!isEliminated) {
         let word_cont = document.getElementById("Player_word");
         if (word_cont) {
-          word_cont.innerHTML = `<h4>Game Started</h4>
-                                 <p>Your Word: <strong>${word}</strong></p>`;
+          word_cont.innerHTML = `<div class="alert alert-success">
+                                  <h4>Game Started!</h4>
+                                  <p><strong>Your Word:</strong> ${word}</p>
+                                </div>`;
         }
       }
     });
    
-    // Show description from other players
+    // Show descriptions from other players (from app.js)
     socket.on('description', desc => {
+      console.log('Received description:', desc);
       if (!isEliminated) {
-        const temp = document.createElement('div');
-        temp.innerHTML = `<p>${desc}</p>`;
         const cluesContainer = document.getElementById('Clues');
         if (cluesContainer) {
-          cluesContainer.appendChild(temp.firstChild);
+          const descElement = document.createElement('div');
+          descElement.className = 'alert alert-light';
+          descElement.innerHTML = `<p>${desc}</p>`;
+          cluesContainer.appendChild(descElement);
         }
       }
     });
    
-    // Show the form when it's your turn
+    // Handle when it's your turn (from app.js)
     socket.on('myTurn', () => {
-      if (isEliminated) return; // Eliminated players can't take turns
+      console.log('My turn to give description');
+      if (isEliminated) return;
       
       let form_clue_cont = document.getElementById("clue_cont");
       if (form_clue_cont) {
-        form_clue_cont.innerHTML = `<form id='form_clue'>
-                                        <h3>Your Turn</h3>
-                                        Description:
-                                        <input type='text' id='clue' required>
-                                        <button type='submit'>Submit</button>
-                                    </form>`;
+        form_clue_cont.innerHTML = `<div class="alert alert-warning">
+                                      <form id='form_clue'>
+                                        <h3>Your Turn!</h3>
+                                        <div class="form-group">
+                                          <label>Give a description for your word:</label>
+                                          <input type='text' id='clue' class="form-control" required placeholder="Enter your description...">
+                                        </div>
+                                        <button type='submit' class="btn btn-primary">Submit Description</button>
+                                      </form>
+                                    </div>`;
                                    
-        // Submit the description to other players
+        // Submit description
         document.getElementById("form_clue").addEventListener("submit", function(event) {
             event.preventDefault();
             if (isEliminated) return;
             
-            let clue = document.getElementById('clue').value;
-            socket.emit('description', clue);
-            this.remove();
+            let clue = document.getElementById('clue').value.trim();
+            if (clue) {
+              console.log('Submitting description:', clue);
+              socket.emit('description', clue);
+              form_clue_cont.innerHTML = '<div class="alert alert-info"><p>Description submitted. Waiting for other players...</p></div>';
+            }
         });
       }
     });
      
-    // Enable voting
+    // Enable voting (from app.js)
     socket.on('voteplayer', () => {
-      if (isEliminated) return; // Eliminated players can't vote
+      console.log('Voting enabled');
+      if (isEliminated) return;
       
       document.querySelectorAll('.vote-btn').forEach(button => {
           button.disabled = false;
-          button.style.backgroundColor = 'green';
+          button.style.backgroundColor = '#28a745';
+          button.textContent = 'Vote to Eliminate';
       });
+      
+      // Update status
+      const statusDiv = document.getElementById('status');
+      if (statusDiv) {
+        statusDiv.innerHTML = 'Voting time! Click on a player to eliminate them.';
+        statusDiv.className = 'alert alert-success text-center';
+        statusDiv.style.display = 'block';
+      }
     });
     
-    // Handle voting form submission
+    // Handle voting for existing players
     document.querySelectorAll(".Elimi-form").forEach(form => {
       form.addEventListener("submit", function(event) {
         event.preventDefault();
         if (isEliminated) return;
         
         const formData = new FormData(this);
+        console.log('Voting for:', formData.get("votedForId"));
         socket.emit("eliminate", formData.get("votedForId"));
         document.querySelectorAll(".vote-btn").forEach(button => {
           button.disabled = true;
+          button.style.backgroundColor = '#6c757d';
+          button.textContent = 'Vote Submitted';
         });
       });
     });
     
-    // Handle player elimination
+    // FIXED: Handle player elimination with immediate display
     socket.on('eliminated', eliminatedPlayer => {
-      console.log(`${eliminatedPlayer} has been eliminated`);
+      console.log(`Player eliminated: ${eliminatedPlayer}`);
       
-      // Show status message
+      // Show status for all players
       const statusDiv = document.getElementById('status');
       if (statusDiv) {
-        statusDiv.innerText = `${eliminatedPlayer} has been eliminated.`;
+        statusDiv.innerHTML = `${eliminatedPlayer} has been eliminated.`;
+        statusDiv.className = 'alert alert-warning text-center';
         statusDiv.style.display = 'block';
       }
       
       // Check if current user was eliminated
       if (eliminatedPlayer === currentUsername) {
+        console.log('Current user eliminated - showing message');
         isEliminated = true;
         showEliminationMessage();
       } else {
-        // Remove eliminated player's card
+        // Remove other player's card
         const playerCard = document.getElementById(eliminatedPlayer);
         if (playerCard) {
           playerCard.remove();
@@ -319,9 +340,15 @@
       }
     });
     
-    // Show elimination message and countdown
+    // Show elimination message with 5-second countdown
     function showEliminationMessage() {
       const overlay = document.getElementById('elimination-overlay');
+      if (!overlay) {
+        alert('You have been eliminated!');
+        setTimeout(() => window.location.href = '/dashboard', 2000);
+        return;
+      }
+      
       overlay.style.display = 'flex';
       
       let countdown = 5;
@@ -329,67 +356,133 @@
       
       const timer = setInterval(() => {
         countdown--;
-        countdownElement.textContent = countdown;
+        if (countdownElement) {
+          countdownElement.textContent = countdown;
+        }
         
         if (countdown <= 0) {
           clearInterval(timer);
           window.location.href = '/dashboard';
         }
-        }, 10000);
-      }
-
-    socket.on('next_round', data=>{
-      let game_round = document.getElementById("game_status");
-      game_round.innerHTML = `GAME ROUND ${data.round}`;
-
-      document.getElementById('Clues').innerHTML = "";
-    })
-
-    socket.on('repeat_round', ()=>{
-      document.getElementById('Clues').innerHTML = "";
-      const statusDiv = document.getElementById('status');
-      statusDiv.innerText = `No one was eliminated due to equal number of votes, the round repeats`;
-      statusDiv.style.display = 'block';
-    })
-
-    socket.on('alert', msg=>{
-      alert(msg);
-    })
+      }, 1000);
+    }
     
-    // Handle next round
+    // Handle next round (from app.js)
     socket.on('next_round', data => {
+      console.log('Next round:', data.round);
       if (!isEliminated) {
         let game_round = document.getElementById("game_status");
         if (game_round) {
-          game_round.innerHTML = `GAME ROUND ${data.round}`;
+          game_round.innerHTML = `Game Round ${data.round}`;
         }
         
-        // Clear clues for new round
+        // Clear clues
         const cluesContainer = document.getElementById('Clues');
         if (cluesContainer) {
           cluesContainer.innerHTML = "";
         }
+        
+        // Reset voting status
+        const statusDiv = document.getElementById('status');
+        if (statusDiv) {
+          statusDiv.style.display = 'none';
+        }
       }
     });
     
-    // Handle alerts
+    // Handle alerts (from app.js)
     socket.on('alert', msg => {
       if (!isEliminated) {
         alert(msg);
       }
     });
    
-    // Handle game over
-    socket.on('game_over', ({ winner }) => {
-      const gameOverDiv = document.getElementById('game-over-message');
-      if (gameOverDiv) {
-        gameOverDiv.innerHTML = `🎉 <strong>Game Over!</strong> <br> <strong>${winner.toUpperCase()}</strong> wins!`;
-        gameOverDiv.style.display = 'block';
-      }
-     
-      // Disable all voting
+    // Handle game over (from app.js) - FIXED: Better end game flow
+    socket.on('game_over', ({ winner, players }) => {
+      console.log('Game over, winner:', winner);
+      
+      // Disable all interactions
       document.querySelectorAll(".vote-btn").forEach(btn => btn.disabled = true);
       document.querySelectorAll(".Elimi-form").forEach(form => form.remove());
+      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
+      
+      // Show winner announcement
+      const gameOverDiv = document.getElementById('game-over-message');
+      if (gameOverDiv) {
+        gameOverDiv.innerHTML = `
+          <div class="text-center">
+            <h2>🎉 <strong>GAME OVER!</strong></h2>
+            <h3 style="color: #28a745;"><strong>${winner.toUpperCase()}</strong> WINS!</h3>
+            <p class="mt-3">Returning to dashboard in <span id="game-over-countdown">8</span> seconds...</p>
+          </div>
+        `;
+        gameOverDiv.className = 'alert alert-success text-center';
+        gameOverDiv.style.display = 'block';
+        gameOverDiv.style.fontSize = '1.2rem';
+        
+        // Start countdown
+        let countdown = 8;
+        const countdownElement = document.getElementById('game-over-countdown');
+        const countdownTimer = setInterval(() => {
+          countdown--;
+          if (countdownElement) {
+            countdownElement.textContent = countdown;
+          }
+          if (countdown <= 0) {
+            clearInterval(countdownTimer);
+            window.location.href = '/dashboard';
+          }
+        }, 1000);
+      }
+      
+      // Show player roles in a nice format
+      if (players && players.length > 0) {
+        const rolesDiv = document.createElement('div');
+        rolesDiv.className = 'alert alert-info mt-4';
+        rolesDiv.innerHTML = `
+          <h4 class="text-center mb-3">🎭 Player Roles Revealed</h4>
+          <div class="row">
+            ${players.map(p => `
+              <div class="col-md-6 mb-2">
+                <div class="card">
+                  <div class="card-body text-center py-2">
+                    <strong>${p.username}</strong><br>
+                    <span class="badge badge-primary">${p.role.toUpperCase()}</span><br>
+                    <small class="text-muted">${p.word}</small>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        
+        // Insert after game over message
+        const container = gameOverDiv.parentElement;
+        container.appendChild(rolesDiv);
+      }
+      
+      // Hide other UI elements
+      const cluesCont = document.getElementById('clue_cont');
+      if (cluesCont) cluesCont.style.display = 'none';
+      
+      const statusDiv = document.getElementById('status');
+      if (statusDiv) statusDiv.style.display = 'none';
+    });
+    
+    // Handle forced dashboard redirect (ensures all players leave)
+    socket.on('force_dashboard_redirect', () => {
+      console.log('Forced redirect to dashboard');
+      window.location.href = '/dashboard';
+    });
+
+    // Handle player disconnection
+    socket.on('playerDisconnected', (username) => {
+      console.log('Player disconnected:', username);
+      const playerCard = document.getElementById(username);
+      if (playerCard) {
+        playerCard.style.opacity = '0.5';
+        playerCard.querySelector('h4').innerHTML += ' <span class="badge badge-secondary">Disconnected</span>';
+      }
     });
        
 </script>
@@ -401,7 +494,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(0, 0, 0, 0.95);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -412,29 +505,43 @@
 .elimination-message {
   background: linear-gradient(135deg, #dc3545, #c82333);
   color: white;
-  padding: 40px;
-  border-radius: 15px;
+  padding: 50px;
+  border-radius: 20px;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  max-width: 500px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+  max-width: 600px;
   animation: slideIn 0.7s ease-out;
+  border: 3px solid #fff;
 }
 
 .elimination-icon {
-  font-size: 4rem;
-  margin-bottom: 20px;
+  font-size: 5rem;
+  margin-bottom: 30px;
   animation: pulse 2s infinite;
-}
-
-.elimination-message h2 {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 15px;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+.elimination-message h2 {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+  letter-spacing: 2px;
+}
+
+.elimination-message p {
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+}
+
 .elimination-timer {
-  margin-top: 20px;
+  margin-top: 30px;
+}
+
+.elimination-timer p {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
 }
 
 .elimination-timer button {
@@ -443,11 +550,23 @@
   color: #dc3545;
   border: none;
   font-weight: bold;
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .elimination-timer button:hover {
   background-color: #f8f9fa;
   transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+#countdown {
+  color: #ffeb3b;
+  font-size: 2rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
 }
 
 @keyframes fadeIn {
@@ -458,17 +577,17 @@
 @keyframes slideIn {
   from { 
     opacity: 0;
-    transform: translateY(-50px);
+    transform: translateY(-100px) scale(0.8);
   }
   to { 
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  50% { transform: scale(1.2); }
 }
 
 .player-card {
@@ -478,5 +597,23 @@
 .player-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.vote-btn:disabled {
+  cursor: not-allowed;
+}
+
+#form_clue {
+  text-align: left;
+}
+
+#form_clue .form-group {
+  margin-bottom: 1rem;
+}
+
+#form_clue label {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  display: block;
 }
 </style>
