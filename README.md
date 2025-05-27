@@ -6,14 +6,15 @@ A web-based implementation of the Undercover social deduction game where players
 
 ### Implemented
 
-- User Registration
+- User Registration: New users can create accounts with secure password storage
 - User Login
 - Game Creation
 - Game Joining
-- Game Invitation
-- Game Core Functionality
-- Player Satistics
 
+### Coming Soon
+
+- Sprint 2
+- 
 ## Contributors
 
 - Erick Chauke
